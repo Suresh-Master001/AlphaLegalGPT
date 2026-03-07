@@ -1,9 +1,47 @@
+
 /**
- * Simple embeddings using cosine similarity
- * No external API required - uses TF-IDF style approach
+ * LangChain-based embeddings for RAG Pipeline
+ * Implements proper text embeddings for legal document retrieval
+ * 
+ * This module provides embeddings using LangChain's integration
  */
 
-// Simple hash function for creating pseudo-embeddings
+// Try different import paths based on LangChain version
+let HuggingFaceEmbeddings;
+try {
+  // Try @langchain/community first (newer versions)
+  const community = await import('@langchain/community');
+  HuggingFaceEmbeddings = community.HuggingFaceEmbeddings;
+} catch (e1) {
+  try {
+    // Try langchain/embeddings directly
+    const langchain = await import('langchain');
+    HuggingFaceEmbeddings = langchain.embeddings.HuggingFaceEmbeddings;
+  } catch (e2) {
+    console.log('Using fallback embeddings implementation');
+  }
+}
+
+/**
+ * Create embeddings model
+ * Falls back to simple hash-based embeddings if LangChain not available
+ */
+export const createEmbeddings = () => {
+  if (HuggingFaceEmbeddings) {
+    return new HuggingFaceEmbeddings({
+      model: 'sentence-transformers/all-MiniLM-L6-v2',
+      timeout: 30000,
+    });
+  }
+  
+  // Fallback: Simple hash-based embeddings
+  return {
+    embedQuery: async (text) => textToVector(text),
+    embedDocuments: async (documents) => documents.map(doc => textToVector(doc))
+  };
+};
+
+// Simple hash function for creating pseudo-embeddings as fallback
 function simpleHash(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -14,12 +52,12 @@ function simpleHash(str) {
   return hash;
 }
 
-// Convert text to a simple numerical vector
+// Convert text to a simple numerical vector (fallback)
 function textToVector(text) {
   const words = text.toLowerCase().split(/\s+/);
   const vector = new Array(100).fill(0);
   
-  words.forEach((word, index) => {
+  words.forEach((word) => {
     const hash = simpleHash(word);
     vector[Math.abs(hash) % 100] += 1;
   });
@@ -33,40 +71,20 @@ function textToVector(text) {
 }
 
 /**
- * Create embeddings model
+ * Generate embedding for a single text query
  */
-export const createEmbeddings = () => {
-  return {
-    embedQuery: async (text) => {
-      return textToVector(text);
-    },
-    embedDocuments: async (documents) => {
-      return documents.map(doc => textToVector(doc));
-    }
-  };
+export const generateEmbedding = async (text) => {
+  const embeddings = createEmbeddings();
+  return await embeddings.embedQuery(text);
 };
 
 /**
- * Generate embeddings for a single text
+ * Generate embeddings for multiple documents
  */
-export const generateEmbedding = async (text, embeddings) => {
-  try {
-    return await embeddings.embedQuery(text);
-  } catch (error) {
-    console.error('Error generating embedding:', error);
-    throw error;
-  }
+export const generateEmbeddings = async (texts) => {
+  const embeddings = createEmbeddings();
+  return await embeddings.embedDocuments(texts);
 };
 
-/**
- * Generate embeddings for multiple texts
- */
-export const generateEmbeddings = async (texts, embeddings) => {
-  try {
-    return await embeddings.embedDocuments(texts);
-  } catch (error) {
-    console.error('Error generating embeddings:', error);
-    throw error;
-  }
-};
+export default createEmbeddings;
 

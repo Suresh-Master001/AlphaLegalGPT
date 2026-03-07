@@ -1,13 +1,23 @@
+/**
+ * LangChain-based Retriever for RAG Pipeline
+ * Combines semantic search with keyword search for legal document retrieval
+ * 
+ * Supports:
+ * - IPC sections (JSON)
+ * - BNS 2023 sections (JSON)
+ * - PDF Case Judgments from DataSet folder
+ */
+
 import { similaritySearch } from './vectorStore.js';
 import { keywordSearch } from './keywordSearch.js';
 
 /**
- * Retrieve relevant IPC sections based on user query using hybrid search
+ * Retrieve relevant IPC/BNS/PDF documents based on user query using hybrid search
  * @param {string} query - User's legal question
  * @param {number} k - Number of top results to retrieve
  * @returns {Object} - Retrieved documents with metadata and scores
  */
-export const retrieveRelevantDocuments = async (query, k = 3) => {
+export const retrieveRelevantDocuments = async (query, k = 5) => {
   try {
     // Perform semantic search (embeddings-based)
     const semanticResults = await similaritySearch(query, k);
@@ -18,15 +28,23 @@ export const retrieveRelevantDocuments = async (query, k = 3) => {
     // Combine results using hybrid scoring
     const hybridResults = combineResults(semanticResults, keywordResults, k);
     
-    // Format results
-    const formattedResults = hybridResults.map((doc) => ({
-      section: doc.section,
-      title: doc.title,
-      content: doc.content,
-      relevanceScore: doc.combinedScore,
-      semanticScore: doc.semanticScore,
-      keywordScore: doc.keywordScore,
-    }));
+    // Format results - handle different document types
+    const formattedResults = hybridResults.map((doc) => {
+      // Check if it's a PDF document (has caseNumber) or statute (has section)
+      const isPDF = doc.source === 'PDF Case Judgment';
+      
+      return {
+        section: doc.section || doc.caseNumber || 'N/A',
+        title: doc.title || doc.caseNumber || 'Case Judgment',
+        content: doc.content,
+        relevanceScore: doc.combinedScore,
+        semanticScore: doc.semanticScore,
+        keywordScore: doc.keywordScore,
+        source: doc.source,
+        year: doc.year,
+        isPDF: isPDF
+      };
+    });
     
     return formattedResults;
   } catch (error) {
@@ -34,12 +52,18 @@ export const retrieveRelevantDocuments = async (query, k = 3) => {
     // Fallback to semantic search only if hybrid fails
     try {
       const fallbackResults = await similaritySearch(query, k);
-      return fallbackResults.map(([doc, score]) => ({
-        section: doc.metadata.section,
-        title: doc.metadata.title,
-        content: doc.pageContent,
-        relevanceScore: 1 - score,
-      }));
+      return fallbackResults.map(([doc, score]) => {
+        const isPDF = doc.metadata.source === 'PDF Case Judgment';
+        return {
+          section: doc.metadata.section || doc.metadata.caseNumber || 'N/A',
+          title: doc.metadata.title || doc.metadata.caseNumber || 'Case Judgment',
+          content: doc.pageContent,
+          relevanceScore: 1 - score,
+          source: doc.metadata.source,
+          year: doc.metadata.year,
+          isPDF: isPDF
+        };
+      });
     } catch (fallbackError) {
       console.error('Fallback also failed:', fallbackError);
       throw error;
@@ -48,7 +72,7 @@ export const retrieveRelevantDocuments = async (query, k = 3) => {
 };
 
 /**
- * Combine semantic and keyword search results
+ * Combine semantic and keyword search results using weighted scoring
  * @param {Array} semanticResults - Results from semantic search
  * @param {Array} keywordResults - Results from keyword search
  * @param {number} k - Number of results to return
@@ -57,8 +81,8 @@ export const retrieveRelevantDocuments = async (query, k = 3) => {
 const combineResults = (semanticResults, keywordResults, k) => {
   const combinedMap = new Map();
   
-  // Process semantic results
-  semanticResults.forEach(([doc, score], index) => {
+  // Process semantic results (60% weight)
+  semanticResults.forEach(([doc, score]) => {
     const key = doc.metadata.section;
     const semanticScore = 1 - score; // Convert distance to similarity
     combinedMap.set(key, {
@@ -72,10 +96,10 @@ const combineResults = (semanticResults, keywordResults, k) => {
     });
   });
   
-  // Process keyword results and merge
-  keywordResults.forEach((result, index) => {
+  // Process keyword results and merge (40% weight)
+  keywordResults.forEach((result) => {
     const key = result.section;
-    const keywordScore = result.keywordScore || (1 / (index + 1)); // Normalize if no score
+    const keywordScore = result.keywordScore || 0.5;
     
     if (combinedMap.has(key)) {
       // Document exists in both - update combined score
@@ -106,12 +130,12 @@ const combineResults = (semanticResults, keywordResults, k) => {
 /**
  * Generate context string from retrieved documents
  * @param {Array} documents - Array of retrieved documents
- * @returns {string} - Formatted context string
+ * @returns {string} - Formatted context string for LLM
  */
 export const generateContext = (documents) => {
   return documents
     .map((doc, index) => {
-      return `[Document ${index + 1}]\nSection: ${doc.section}\nTitle: ${doc.title}\nContent: ${doc.content}\n`;
+      return '[Document ' + (index + 1) + ']\nSection: ' + doc.section + '\nTitle: ' + doc.title + '\nContent: ' + doc.content + '\n';
     })
     .join('\n');
 };
@@ -138,11 +162,11 @@ export const calculateConfidence = (documents) => {
  * @returns {string[]} - Array of citation strings
  */
 export const extractCitations = (documents) => {
-  return documents.map((doc) => `${doc.section} – ${doc.title}`);
+  return documents.map((doc) => doc.section + ' - ' + doc.title);
 };
 
 /**
- * Full retrieval pipeline
+ * Full retrieval pipeline - retrieves context and prepares for LLM
  * @param {string} query - User's legal question
  * @returns {Object} - Complete retrieval result with context, citations, and confidence
  */
@@ -158,5 +182,13 @@ export const retrieveAndPrepareContext = async (query) => {
     citations,
     confidence,
   };
+};
+
+export default {
+  retrieveRelevantDocuments,
+  retrieveAndPrepareContext,
+  generateContext,
+  calculateConfidence,
+  extractCitations,
 };
 
