@@ -1,4 +1,4 @@
-# AttorneyGPT - AI Legal Assistant
+# AlphaLegalGPT - AI Legal Assistant
 
 A full-stack AI legal assistant platform that simulates Retrieval Augmented Generation (RAG) using the Indian Penal Code (IPC) dataset.
 
@@ -34,7 +34,7 @@ A full-stack AI legal assistant platform that simulates Retrieval Augmented Gene
 ## Project Structure
 
 ```
-AttorneyGPT/
+AlphaLegalGPT/
 ├── frontend/           # React frontend
 │   ├── src/
 │   │   ├── components/ # UI components
@@ -170,7 +170,7 @@ AttorneyGPT/
 4. Use a process manager like PM2:
    ```bash
    npm install -g pm2
-   pm2 start npm --name "attorneygpt" -- start
+   pm2 start npm --name "alphalegalgpt" -- start
    ```
 
 ### Option 2: Render.com (Free)
@@ -201,7 +201,7 @@ AttorneyGPT/
    ```
 3. Deploy:
    ```bash
-   heroku create attorneygpt
+   heroku create alphalegalgpt
    heroku config:set FRONTEND_URL=https://your-app.herokuapp.com
    git push heroku main
    ```

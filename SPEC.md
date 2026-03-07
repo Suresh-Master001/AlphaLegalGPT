@@ -1,7 +1,7 @@
-# AttorneyGPT - AI Legal Assistant Platform
+# AlphaLegalGPT - AI Legal Assistant Platform
 
 ## Project Overview
-- **Project Name**: AttorneyGPT
+- **Project Name**: AlphaLegalGPT
 - **Type**: Full-stack AI Legal Assistant Web Application
 - **Core Functionality**: Simulates RAG-based legal Q&A system using Indian Penal Code (IPC) dataset
 - **Target Users**: Legal professionals, law students, and citizens seeking legal information
@@ -65,7 +65,7 @@
 ### Layout Structure
 
 #### Left Sidebar (260px width)
-- **Header**: App logo + "AttorneyGPT" text
+- **Header**: App logo + "AlphaLegalGPT" text
 - **New Chat Button**: Full width, prominent styling
 - **Chat History**: Scrollable list of previous conversations
 - **Footer**: Language toggle + User avatar + Settings icon
@@ -207,7 +207,7 @@ Response: {
 ## File Structure
 
 ```
-AttorneyGPT/
+AlphaLegalGPT/
 ├── frontend/
 │   ├── src/
 │   │   ├── components/

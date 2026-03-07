@@ -1,5 +1,5 @@
 {
-  "name": "attorneygpt-backend",
+  "name": "alphalegalgpt-backend",
   "version": "1.0.0",
   "description": "AI Legal Assistant Backend with RAG",
   "main": "server/server.js",

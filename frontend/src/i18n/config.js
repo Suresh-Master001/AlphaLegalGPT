@@ -5,7 +5,7 @@ const resources = {
   en: {
     translation: {
       // App
-      appName: 'AttorneyGPT',
+      appName: 'AlphaLegalGPT',
       appSubtitle: 'AI Legal Assistant',
       
       // Sidebar
@@ -30,7 +30,7 @@ const resources = {
       disconnected: 'Disconnected',
       
       // Welcome
-      welcomeTitle: 'Welcome to AttorneyGPT',
+      welcomeTitle: 'Welcome to AlphaLegalGPT',
       welcomeMessage: 'Your AI-powered legal assistant for Indian Penal Code queries. Ask me anything about IPC sections, criminal law, or legal procedures.',
       exampleQuestions: 'Example questions:',
       example1: 'What is IPC Section 420?',
@@ -51,7 +51,7 @@ const resources = {
   ta: {
     translation: {
       // App
-      appName: 'அட்டர்னிGPT',
+      appName: 'அல்பாஎல்கல்ஜிபிடி',
       appSubtitle: 'AI சட்ட உதவியாளர்',
       
       // Sidebar
@@ -76,7 +76,7 @@ const resources = {
       disconnected: 'துண்டிக்கப்பட்டது',
       
       // Welcome
-      welcomeTitle: 'அட்டர்னிGPT-க்கு வரவேற்கிறோம்',
+      welcomeTitle: 'அல்பாஎல்கல்ஜிபிடி-க்கு வரவேற்கிறோம்',
       welcomeMessage: 'இந்திய தண்டனைச் சட்டத்திற்கான உங்கள் AI-ஆற்றல் சட்ட உதவியாளர். IPC பிரிவுகள், குற்றவியல் சட்டம் அல்லது சட்ட நடைமுறைகள் பற்றி என்னிடம் கேளுங்கள்.',
       exampleQuestions: 'உதாரணமான கேள்விகள்:',
       example1: 'IPC பிரிவு 420 என்றால் என்ன?',
