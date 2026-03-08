@@ -1,130 +1,149 @@
 /**
  * LangChain-based Retriever for RAG Pipeline
- * Combines semantic search with keyword search for legal document retrieval
+ * Uses hybrid search (semantic + keyword) for legal document retrieval
  * 
  * Supports:
+ * - PDF Case Judgments from DataSet folder
  * - IPC sections (JSON)
  * - BNS 2023 sections (JSON)
- * - PDF Case Judgments from DataSet folder
  */
 
 import { similaritySearch } from './vectorStore.js';
-import { keywordSearch } from './keywordSearch.js';
+import { getVectorStore } from './vectorStore.js';
 
 /**
- * Retrieve relevant IPC/BNS/PDF documents based on user query using hybrid search
+ * Simple keyword-based search on loaded documents
+ * @param {string} query - User's search query
+ * @param {Array} documents - Array of documents to search
+ * @returns {Array} - Documents with keyword match scores
+ */
+function keywordSearch(query, documents) {
+  const queryTerms = query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+  if (queryTerms.length === 0) return [];
+  
+  const results = [];
+  
+  for (const doc of documents) {
+    const content = doc.pageContent.toLowerCase();
+    let matchCount = 0;
+    let totalMatches = 0;
+    
+    for (const term of queryTerms) {
+      if (content.includes(term)) {
+        matchCount++;
+        const regex = new RegExp(term, 'gi');
+        const matches = content.match(regex);
+        if (matches) {
+          totalMatches += matches.length;
+        }
+      }
+    }
+    
+    if (matchCount > 0) {
+      const score = (matchCount / queryTerms.length) * Math.min(1, totalMatches / 5);
+      results.push({ doc, score: Math.min(1, score) });
+    }
+  }
+  
+  results.sort((a, b) => b.score - a.score);
+  return results;
+}
+
+/**
+ * Retrieve relevant documents based on user query using hybrid search
  * @param {string} query - User's legal question
  * @param {number} k - Number of top results to retrieve
  * @returns {Object} - Retrieved documents with metadata and scores
  */
 export const retrieveRelevantDocuments = async (query, k = 5) => {
   try {
-    // Perform semantic search (embeddings-based)
-    const semanticResults = await similaritySearch(query, k);
+    // Get semantic search results
+    const semanticResults = await similaritySearch(query, k * 2);
+    
+    // Get all documents for keyword search
+    const vectorStore = await getVectorStore();
+    const allDocs = vectorStore.getAllDocuments();
     
     // Perform keyword search
-    const keywordResults = await keywordSearch(query, k);
+    const keywordResults = keywordSearch(query, allDocs);
     
-    // Combine results using hybrid scoring
-    const hybridResults = combineResults(semanticResults, keywordResults, k);
+    // Combine results using weighted scoring
+    const combinedMap = new Map();
     
-    // Format results - handle different document types
-    const formattedResults = hybridResults.map((doc) => {
-      // Check if it's a PDF document (has caseNumber) or statute (has section)
-      const isPDF = doc.source === 'PDF Case Judgment';
+    // Process semantic results (50% weight)
+    semanticResults.forEach(([doc, distance]) => {
+      const key = doc.metadata.section || doc.metadata.caseNumber || doc.metadata.fileName;
+      const semanticScore = 1 - distance;
+      combinedMap.set(key, {
+        doc,
+        semanticScore,
+        keywordScore: 0,
+        combinedScore: semanticScore * 0.5
+      });
+    });
+    
+    // Process keyword results (50% weight)
+    keywordResults.forEach(({ doc, score }) => {
+      const key = doc.metadata.section || doc.metadata.caseNumber || doc.metadata.fileName;
+      
+      if (combinedMap.has(key)) {
+        const existing = combinedMap.get(key);
+        existing.keywordScore = score;
+        existing.combinedScore = (existing.semanticScore * 0.5) + (score * 0.5);
+      } else {
+        combinedMap.set(key, {
+          doc,
+          semanticScore: 0,
+          keywordScore: score,
+          combinedScore: score * 0.5
+        });
+      }
+    });
+    
+    // Sort by combined score and get top k
+    const sortedResults = [...combinedMap.values()]
+      .sort((a, b) => b.combinedScore - a.combinedScore)
+      .slice(0, k);
+    
+    // Format results
+    const formattedResults = sortedResults.map(({ doc, semanticScore, keywordScore, combinedScore }) => {
+      const metadata = doc.metadata || {};
+      const isStatute = metadata.isStatute;
       
       return {
-        section: doc.section || doc.caseNumber || 'N/A',
-        title: doc.title || doc.caseNumber || 'Case Judgment',
-        content: doc.content,
-        relevanceScore: doc.combinedScore,
-        semanticScore: doc.semanticScore,
-        keywordScore: doc.keywordScore,
-        source: doc.source,
-        year: doc.year,
-        isPDF: isPDF
+        section: metadata.section || metadata.caseNumber || 'Unknown',
+        title: metadata.title || metadata.caseNumber || (isStatute ? 'Legal Section' : 'Case Judgment'),
+        content: doc.pageContent,
+        relevanceScore: combinedScore,
+        semanticScore,
+        keywordScore,
+        source: metadata.source || 'Unknown',
+        year: metadata.year,
+        isPDF: !isStatute,
+        isStatute: isStatute || false
       };
     });
     
     return formattedResults;
   } catch (error) {
     console.error('Error retrieving documents:', error);
-    // Fallback to semantic search only if hybrid fails
-    try {
-      const fallbackResults = await similaritySearch(query, k);
-      return fallbackResults.map(([doc, score]) => {
-        const isPDF = doc.metadata.source === 'PDF Case Judgment';
-        return {
-          section: doc.metadata.section || doc.metadata.caseNumber || 'N/A',
-          title: doc.metadata.title || doc.metadata.caseNumber || 'Case Judgment',
-          content: doc.pageContent,
-          relevanceScore: 1 - score,
-          source: doc.metadata.source,
-          year: doc.metadata.year,
-          isPDF: isPDF
-        };
-      });
-    } catch (fallbackError) {
-      console.error('Fallback also failed:', fallbackError);
-      throw error;
-    }
-  }
-};
-
-/**
- * Combine semantic and keyword search results using weighted scoring
- * @param {Array} semanticResults - Results from semantic search
- * @param {Array} keywordResults - Results from keyword search
- * @param {number} k - Number of results to return
- * @returns {Array} - Combined and ranked results
- */
-const combineResults = (semanticResults, keywordResults, k) => {
-  const combinedMap = new Map();
-  
-  // Process semantic results (60% weight)
-  semanticResults.forEach(([doc, score]) => {
-    const key = doc.metadata.section;
-    const semanticScore = 1 - score; // Convert distance to similarity
-    combinedMap.set(key, {
-      section: doc.metadata.section,
-      title: doc.metadata.title,
-      content: doc.pageContent,
-      semanticScore,
-      keywordScore: 0,
-      combinedScore: semanticScore * 0.6, // 60% weight for semantic
-      source: doc.metadata.source,
+    const results = await similaritySearch(query, k);
+    return results.map(([doc, score]) => {
+      const metadata = doc.metadata || {};
+      return {
+        section: metadata.section || metadata.caseNumber || 'Unknown',
+        title: metadata.title || metadata.caseNumber || 'Case Judgment',
+        content: doc.pageContent,
+        relevanceScore: 1 - score,
+        semanticScore: 1 - score,
+        keywordScore: 0,
+        source: metadata.source || 'Unknown',
+        year: metadata.year,
+        isPDF: !metadata.isStatute,
+        isStatute: metadata.isStatute || false
+      };
     });
-  });
-  
-  // Process keyword results and merge (40% weight)
-  keywordResults.forEach((result) => {
-    const key = result.section;
-    const keywordScore = result.keywordScore || 0.5;
-    
-    if (combinedMap.has(key)) {
-      // Document exists in both - update combined score
-      const existing = combinedMap.get(key);
-      existing.keywordScore = keywordScore;
-      // Weighted average: 60% semantic, 40% keyword
-      existing.combinedScore = (existing.semanticScore * 0.6) + (keywordScore * 0.4);
-    } else {
-      // New document from keyword search
-      combinedMap.set(key, {
-        section: result.section,
-        title: result.title,
-        content: result.content,
-        semanticScore: 0,
-        keywordScore: keywordScore,
-        combinedScore: keywordScore * 0.4, // 40% weight for keyword-only
-        source: result.source,
-      });
-    }
-  });
-  
-  // Sort by combined score and return top k
-  return [...combinedMap.values()]
-    .sort((a, b) => b.combinedScore - a.combinedScore)
-    .slice(0, k);
+  }
 };
 
 /**
@@ -135,7 +154,8 @@ const combineResults = (semanticResults, keywordResults, k) => {
 export const generateContext = (documents) => {
   return documents
     .map((doc, index) => {
-      return '[Document ' + (index + 1) + ']\nSection: ' + doc.section + '\nTitle: ' + doc.title + '\nContent: ' + doc.content + '\n';
+      const type = doc.isStatute ? 'Section' : 'Case';
+      return `[Document ${index + 1}] ${type}: ${doc.section}\n${doc.content}\n`;
     })
     .join('\n');
 };
@@ -149,9 +169,7 @@ export const calculateConfidence = (documents) => {
   if (!documents || documents.length === 0) return 0;
   
   const avgScore = documents.reduce((sum, doc) => sum + doc.relevanceScore, 0) / documents.length;
-  
-  // Normalize to 0-1 range and scale to realistic confidence (0.7-0.95)
-  const confidence = Math.min(0.95, Math.max(0.7, avgScore));
+  const confidence = Math.min(1, Math.max(0.3, avgScore));
   
   return Math.round(confidence * 100) / 100;
 };
@@ -162,7 +180,10 @@ export const calculateConfidence = (documents) => {
  * @returns {string[]} - Array of citation strings
  */
 export const extractCitations = (documents) => {
-  return documents.map((doc) => doc.section + ' - ' + doc.title);
+  return documents.map((doc) => {
+    const year = doc.year ? ` (${doc.year})` : '';
+    return `${doc.section}${year}`;
+  });
 };
 
 /**
@@ -191,4 +212,3 @@ export default {
   calculateConfidence,
   extractCitations,
 };
-

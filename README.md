@@ -87,9 +87,10 @@ AlphaLegalGPT/
    - Get a free API key from: https://huggingface.co/
    - Add to `.env`: `HUGGINGFACE_API_KEY=your_key_here`
    
-   **OpenAI** - For advanced LLM responses:
-   - Get your API key from: https://platform.openai.com/api-keys
-   - Add to `.env`: `OPENAI_API_KEY=your_key_here`
+   **Gemini** - For advanced LLM responses:
+   - Get your API key from: https://aistudio.google.com/app/apikey
+   - Add to `.env`: `GEMINI_API_KEY=your_key_here`
+   - Optional model: `GEMINI_MODEL=gemini-1.5-flash`
    
    **Together AI** - For open-source LLM alternatives:
    - Get your API key from: https://together.ai/

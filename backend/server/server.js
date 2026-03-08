@@ -3,16 +3,16 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import chatRoutes, { setupSocketHandlers } from './routes/chat.js';
-import { getVectorStore } from './rag/vectorStore.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-
-// Load environment variables
-dotenv.config();
+import chatRoutes, { setupSocketHandlers } from './routes/chat.js';
+import { getVectorStore } from './rag/vectorStore.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Always load backend/.env regardless of the command's current working directory
+dotenv.config({ path: join(__dirname, '../.env') });
 
 const app = express();
 const httpServer = createServer(app);
@@ -46,7 +46,7 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    service: 'AttorneyGPT Legal Assistant'
+    service: 'AttorneyGPT Legal Assistant (Gemini)'
   });
 });
 
@@ -67,7 +67,7 @@ setupSocketHandlers(io);
 // Initialize vector store on startup
 const initializeApp = async () => {
   try {
-    console.log('Starting AttorneyGPT Backend...');
+    console.log('Starting AttorneyGPT Backend (Gemini)...');
     console.log('Initializing vector store with IPC dataset...');
     
     // Initialize vector store (this may take a moment)
@@ -84,6 +84,7 @@ const initializeApp = async () => {
 ╠═══════════════════════════════════════════════════╣
 ║  Server: http://localhost:${PORT}                 ║
 ║  API:     http://localhost:${PORT}/api            ║
+║  LLM:     Gemini                                  ║
 ║  WebSocket: Enabled                               ║
 ╚═══════════════════════════════════════════════════╝
       `);
@@ -115,4 +116,3 @@ process.on('SIGINT', () => {
 initializeApp();
 
 export default app;
-

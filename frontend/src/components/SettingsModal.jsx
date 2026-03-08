@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiKey, FiSave, FiCheck, FiAlertCircle, FiCpu } from 'react-icons/fi';
-import { SiHuggingface, SiOpenai } from 'react-icons/si';
+import { SiHuggingface, SiGoogle } from 'react-icons/si';
 
 const SettingsModal = ({ isOpen, onClose }) => {
   const [settings, setSettings] = useState({
     huggingfaceApiKey: '',
-    openaiApiKey: '',
+    geminiApiKey: '',
     togetherApiKey: '',
   });
   const [showKeys, setShowKeys] = useState({
     huggingface: false,
-    openai: false,
+    gemini: false,
     together: false,
   });
   const [saveStatus, setSaveStatus] = useState(null);
@@ -23,7 +23,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
       const parsed = JSON.parse(savedSettings);
       setSettings({
         huggingfaceApiKey: parsed.huggingfaceApiKey || '',
-        openaiApiKey: parsed.openaiApiKey || '',
+        geminiApiKey: parsed.geminiApiKey || '',
         togetherApiKey: parsed.togetherApiKey || '',
       });
     }
@@ -62,7 +62,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
     if (window.confirm('Are you sure you want to clear all API keys?')) {
       setSettings({
         huggingfaceApiKey: '',
-        openaiApiKey: '',
+        geminiApiKey: '',
         togetherApiKey: '',
       });
       localStorage.removeItem('apiSettings');
@@ -166,28 +166,28 @@ const SettingsModal = ({ isOpen, onClose }) => {
               </p>
             </div>
 
-            {/* OpenAI API */}
+            {/* Gemini API */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <SiOpenai className="w-5 h-5 text-green-400" />
+                <SiGoogle className="w-5 h-5 text-green-400" />
                 <label className="text-sm font-medium text-text-primary">
-                  OpenAI API Key
+                  Gemini API Key
                 </label>
               </div>
               <div className="relative">
                 <input
-                  type={showKeys.openai ? 'text' : 'password'}
-                  value={settings.openaiApiKey}
-                  onChange={(e) => handleChange('openaiApiKey', e.target.value)}
-                  placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  type={showKeys.gemini ? 'text' : 'password'}
+                  value={settings.geminiApiKey}
+                  onChange={(e) => handleChange('geminiApiKey', e.target.value)}
+                  placeholder="AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                   className="w-full px-4 py-3 bg-input-bg border border-border rounded-xl text-text-primary placeholder-text-secondary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors pr-12"
                 />
                 <button
                   type="button"
-                  onClick={() => toggleShowKey('openai')}
+                  onClick={() => toggleShowKey('gemini')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
                 >
-                  {showKeys.openai ? (
+                  {showKeys.gemini ? (
                     <FiX className="w-5 h-5" />
                   ) : (
                     <FiKey className="w-5 h-5" />
@@ -197,12 +197,12 @@ const SettingsModal = ({ isOpen, onClose }) => {
               <p className="text-xs text-text-secondary">
                 Get API key from{' '}
                 <a 
-                  href="https://platform.openai.com/api-keys" 
+                  href="https://aistudio.google.com/app/apikey" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-accent hover:underline"
                 >
-                  platform.openai.com
+                  aistudio.google.com
                 </a>
               </p>
             </div>

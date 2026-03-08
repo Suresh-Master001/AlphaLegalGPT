@@ -1,72 +1,69 @@
 /**
- * Chat Routes with RAG using LangChain
+ * Chat Routes with RAG + Gemini
  * Implements Retrieval Augmented Generation for legal Q&A
- * 
- * RAG Architecture:
- * 1. User Question → Search relevant data in dataset
- * 2. Send context + question to AI
- * 3. AI generates answer
+ * Uses Gemini to generate user-friendly responses
  * 
  * Supports:
  * - IPC sections (JSON)
  * - BNS 2023 sections (JSON)
- * - PDF Case Judgments from DataSet folder
  */
 
 import express from 'express';
 import { retrieveAndPrepareContext } from '../rag/retriever.js';
-import { ChatOpenAI } from 'langchain/chat_models/openai';
-import { PromptTemplate } from 'langchain/prompts';
-import { LLMChain } from 'langchain/chains';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { 
+  getSystemPrompt, 
+  getGreetingResponse, 
+  getErrorResponse, 
+  isSupportedLanguage 
+} from '../i18n.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '../../.env') });
 
 const router = express.Router();
 
-// Simple in-memory chat history (would be database in production)
+const rawApiKey = process.env.GEMINI_API_KEY || "";
+const geminiApiKey = rawApiKey.trim();
+const hasPlaceholderKey = geminiApiKey === "your-gemini-api-key-here";
+// Use gemini-1.5-pro or gemini-1.0-pro for v1 API, with flash as fallback
+const geminiModel = (process.env.GEMINI_MODEL || 'gemini-1.5-pro').trim();
+
+if (!geminiApiKey || hasPlaceholderKey) {
+  throw new Error(
+    "GEMINI_API_KEY is missing or still set to placeholder. Update backend/.env with a real API key."
+  );
+}
+
+// Simple in-memory chat history
 const chatHistory = new Map();
-
-// Initialize LLM for answer generation
-// Note: In production, use environment variables for API keys
-let llm = null;
-
-/**
- * Get or initialize the LLM
- */
-const getLLM = () => {
-  if (!llm) {
-    // Using a mock/simulation for demo purposes
-    // In production, use: new ChatOpenAI({ temperature: 0.7, openAIApiKey: process.env.OPENAI_API_KEY })
-    llm = {
-      call: async (prompt) => {
-        // This is a fallback - actual LLM integration would go here
-        console.log('LLM prompt received (simulated)');
-        return 'Response generated via RAG';
-      }
-    };
-  }
-  return llm;
-};
 
 /**
  * POST /api/chat
- * Handle chat requests with RAG
- * 
- * Flow: User Question → Retrieve Context → Generate Answer
+ * Handle chat requests with RAG + Gemini
+ * Supports language parameter: 'en' (English) or 'ta' (Tamil)
  */
 router.post('/chat', async (req, res) => {
   try {
-    const { query, sessionId } = req.body;
+    const { query, sessionId, language = 'en' } = req.body;
     
     if (!query) {
       return res.status(400).json({ error: 'Query is required' });
     }
     
-    console.log('Processing RAG request for:', query);
+    // Validate and normalize language (fallback to 'en' if unsupported)
+    const normalizedLanguage = isSupportedLanguage(language) ? language : 'en';
     
-    // Step 1 & 2: Retrieve relevant documents using RAG (search + context)
+    console.log(`Processing request for: ${query} [lang: ${normalizedLanguage}]`);
+    
+    // Step 1: Retrieve relevant documents using RAG
     const retrievalResult = await retrieveAndPrepareContext(query);
     
-    // Step 3: Generate response using context + LLM
-    const answer = await generateLegalAnswer(query, retrievalResult);
+    // Step 2: Generate user-friendly response using Gemini (with language support)
+    const response = await generateFriendlyResponse(query, retrievalResult, normalizedLanguage);
     
     // Store in chat history
     if (!chatHistory.has(sessionId)) {
@@ -74,38 +71,31 @@ router.post('/chat', async (req, res) => {
     }
     const history = chatHistory.get(sessionId);
     history.push({ role: 'user', content: query });
-    history.push({ role: 'assistant', content: answer, citations: retrievalResult.citations });
+    history.push({ role: 'assistant', content: response.answer, citations: response.citations });
     
-    // Keep only last 20 messages
     if (history.length > 20) {
       history.splice(0, history.length - 20);
     }
     
-    res.json({
-      answer,
-      citations: retrievalResult.citations,
-      confidence: retrievalResult.confidence,
-    });
+    // Return structured JSON response
+    res.json(response);
   } catch (error) {
     console.error('Chat error:', error);
-    res.status(500).json({ error: 'Failed to process chat request' });
+    res.status(500).json({ 
+      answer: "I could not find an exact IPC reference for your question. Please consult a legal professional.",
+      citations: [],
+      section_title: "",
+      confidence: 0
+    });
   }
 });
 
-/**
- * GET /api/chat/history/:sessionId
- * Get chat history for a session
- */
 router.get('/chat/history/:sessionId', (req, res) => {
   const { sessionId } = req.params;
   const history = chatHistory.get(sessionId) || [];
   res.json({ history });
 });
 
-/**
- * DELETE /api/chat/history/:sessionId
- * Clear chat history for a session
- */
 router.delete('/chat/history/:sessionId', (req, res) => {
   const { sessionId } = req.params;
   chatHistory.delete(sessionId);
@@ -113,94 +103,156 @@ router.delete('/chat/history/:sessionId', (req, res) => {
 });
 
 /**
- * Generate legal answer using RAG with context
- * This implements the core RAG pattern:
- * - Retrieve relevant documents from dataset (IPC, BNS, PDF Cases)
- * - Combine with user question as context
- * - Generate answer using LLM
+ * Generate user-friendly response using Gemini
+ * Combines RAG context with AI generation
+ * @param {string} query - User's query
+ * @param {Object} retrievalResult - Retrieved documents from RAG
+ * @param {string} language - Language code ('en' or 'ta')
  */
-async function generateLegalAnswer(query, retrievalResult) {
-  const { context, documents, citations } = retrievalResult;
+async function generateFriendlyResponse(query, retrievalResult, language = 'en') {
+  const { documents, citations, confidence } = retrievalResult;
   
-  // Extract relevant information from retrieved context
   const relevantDoc = documents[0];
   
+  // If no relevant document found
   if (!relevantDoc) {
-    return "I couldn't find specific information related to your query in the Indian Penal Code or case judgments. Please try a different question or consult a legal professional for specific legal advice.";
+    return getErrorResponse('noReference', language);
   }
   
-  const section = relevantDoc.section;
-  const title = relevantDoc.title;
-  const content = relevantDoc.content;
-  const source = relevantDoc.source;
-  const isPDF = relevantDoc.isPDF;
-  
-  // Check if the query is asking about a specific section
-  const queryLower = query.toLowerCase();
-  
-  // Handle common queries with contextual responses
-  if (queryLower.includes('hello') || queryLower.includes('hi') || queryLower.includes('hey')) {
-    return "Hello! I'm AttorneyGPT, your AI legal assistant. I can help you understand various sections of the Indian Penal Code (IPC), Bharatiya Nyaya Sanhita 2023 (BNS), and case judgments from the DataSet. Please feel free to ask any legal questions you may have.";
+  // Check for greetings using i18n
+  const greetingResponse = getGreetingResponse(query, language);
+  if (greetingResponse) {
+    return greetingResponse;
   }
   
-  if (queryLower.includes('thank') || queryLower.includes('thanks')) {
-    return "You're welcome! If you have any more legal questions, feel free to ask. Remember, this information is for educational purposes and should not be considered as legal advice.";
-  }
+  // Build context from retrieved documents
+  let context = "";
+  let sectionTitle = relevantDoc.title || relevantDoc.section;
   
-  if (queryLower.includes('help') || queryLower.includes('what can you do')) {
-    return "I can help you understand various sections of the Indian Penal Code (IPC), Bharatiya Nyaya Sanhita 2023 (BNS), and case judgments using RAG (Retrieval Augmented Generation). You can ask me questions like:\n\n- What is IPC Section 420?\n- What are the punishments for theft?\n- What does Section 498A cover?\n- Explain the law regarding assault\n- Tell me about criminal breach of trust\n\nThe system retrieves relevant legal documents and case judgments to generate contextual answers.";
-  }
+  documents.forEach((doc, index) => {
+    context += `\n\nDocument ${index + 1}:\n`;
+    context += `Section: ${doc.section}\n`;
+    context += `Title: ${doc.title || 'N/A'}\n`;
+    context += `Content: ${doc.content || doc.pageContent || 'N/A'}\n`;
+  });
   
-  // Build answer based on RAG-retrieved context
-  let answer = '';
+  // Get localized system prompt based on language
+  const systemPrompt = getSystemPrompt(language);
   
-  // Check if it's a PDF case judgment or statute
-  if (isPDF) {
-    // PDF Case Judgment response
-    answer = '**Case: ' + section + '**\n\n';
-    if (relevantDoc.year) {
-      answer += '*Year: ' + relevantDoc.year + '*\n\n';
+  // Create prompt for Gemini with language instruction
+  const languageInstruction = language === 'ta' 
+    ? `\n\nIMPORTANT: Respond in Tamil language (தமிழ்).`
+    : '';
+  
+  const prompt = `${systemPrompt}${languageInstruction}
+
+User Question: ${query}
+
+Legal Context: ${context}`;
+
+  try {
+    const responseText = await generateWithGemini(prompt);
+    
+    // Try to extract JSON from response
+    try {
+      // Find JSON in the response
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          answer: parsed.answer || responseText,
+          citations: parsed.citations || citations,
+          section_title: parsed.section_title || sectionTitle,
+          confidence: parsed.confidence || (documents.length > 0 ? 0.85 : 0)
+        };
+      }
+    } catch (parseError) {
+      console.log('JSON parse failed, using raw response');
     }
-    answer += content + '\n\n';
-    answer += '*Source: Case Judgment from DataSet*\n\n';
-  } else {
-    // Statute (IPC/BNS) response
-    answer = '**' + section + ' - ' + title + '**\n\n';
-    answer += content + '\n\n';
-    answer += '*Source: ' + source + '*\n\n';
+    
+    // Return as structured response
+    return {
+      answer: responseText,
+      citations: citations,
+      section_title: sectionTitle,
+      confidence: documents.length > 0 ? 0.85 : 0
+    };
+    
+  } catch (geminiError) {
+    let answer = "";
+    if (relevantDoc.isStatute) {
+      answer = `${relevantDoc.section} - ${relevantDoc.title}: ${relevantDoc.content}`;
+    } else {
+      answer = `Case ${relevantDoc.section}: ${relevantDoc.content?.substring(0, 400)}...`;
+    }
+
+    const isQuotaOrRateLimited = geminiError?.status === 429;
+
+    if (isQuotaOrRateLimited) {
+      console.warn('Gemini quota/rate limit exceeded. Using retrieval-only fallback.');
+      answer =
+        `AI enhancement is temporarily unavailable due to API quota/rate limits. ` +
+        `Showing retrieval-based result:\n\n${answer}`;
+    } else {
+      console.error('Gemini error:', geminiError);
+    }
+    
+    return {
+      answer: answer,
+      citations: citations,
+      section_title: sectionTitle,
+      confidence: documents.length > 0 ? 0.7 : 0
+    };
   }
-  
-  // Add related provisions from retrieved documents
-  const relatedDocs = documents.slice(1).filter(doc => !doc.isPDF);
-  if (relatedDocs.length > 0) {
-    answer += '*Related provisions:*\n';
-    relatedDocs.forEach((doc) => {
-      answer += '- ' + doc.section + ' (' + doc.title + ')\n';
-    });
-    answer += '\n';
+}
+
+async function generateWithGemini(prompt) {
+  const endpoint =
+    `https://generativelanguage.googleapis.com/v1/models/${encodeURIComponent(geminiModel)}:generateContent` +
+    `?key=${encodeURIComponent(geminiApiKey)}`;
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [{ text: prompt }],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 500,
+      },
+    }),
+  });
+
+  const payload = await response.json();
+
+  if (!response.ok) {
+    const err = new Error(payload?.error?.message || 'Gemini API request failed');
+    err.status = response.status;
+    err.code = payload?.error?.status || payload?.error?.code || null;
+    throw err;
   }
-  
-  // Add case references if available
-  const caseDocs = documents.filter(doc => doc.isPDF);
-  if (caseDocs.length > 0) {
-    answer += '*Relevant case judgments:*\n';
-    caseDocs.forEach((doc) => {
-      answer += '- ' + doc.section + (doc.year ? ` (${doc.year})` : '') + '\n';
-    });
-    answer += '\n';
+
+  const parts = payload?.candidates?.[0]?.content?.parts || [];
+  const text = parts
+    .map((part) => part?.text || '')
+    .join('')
+    .trim();
+
+  if (!text) {
+    throw new Error('Gemini returned an empty response');
   }
-  
-  // Add disclaimer
-  answer += '---\n\n';
-  answer += '*Note: This information is provided for educational purposes only and does not constitute legal advice. ';
-  answer += 'For specific legal matters, please consult a qualified advocate.*';
-  
-  return answer;
+
+  return text;
 }
 
 /**
- * Handle WebSocket chat events for streaming responses
- * Implements real-time RAG pipeline with streaming
+ * Handle WebSocket chat events
  */
 export const setupSocketHandlers = (io) => {
   io.on('connection', (socket) => {
@@ -210,36 +262,20 @@ export const setupSocketHandlers = (io) => {
       const { query, sessionId, language = 'en' } = data;
       
       try {
-        // Emit typing indicator
         socket.emit('chat:typing', { isTyping: true });
         
-        // RAG Pipeline:
-        // 1. Retrieve relevant documents from dataset
+        // Validate and normalize language (fallback to 'en' if unsupported)
+        const normalizedLanguage = isSupportedLanguage(language) ? language : 'en';
+        
         const retrievalResult = await retrieveAndPrepareContext(query);
+        const response = await generateFriendlyResponse(query, retrievalResult, normalizedLanguage);
         
-        // 2. Generate answer using retrieved context
-        const answer = await generateLegalAnswer(query, retrievalResult, language);
-        
-        // 3. Stream response token by token
-        const tokens = answer.split(/(?=[ \n])/);
-        let streamedResponse = '';
-        
-        for (const token of tokens) {
-          streamedResponse += token;
-          socket.emit('chat:streaming', { 
-            text: token,
-            partial: true 
-          });
-          
-          // Small delay for streaming effect
-          await new Promise(resolve => setTimeout(resolve, 10));
-        }
-        
-        // Send complete response with citations
+        // Send complete response
         socket.emit('chat:complete', {
-          answer: streamedResponse,
-          citations: retrievalResult.citations,
-          confidence: retrievalResult.confidence,
+          answer: response.answer,
+          citations: response.citations,
+          section_title: response.section_title,
+          confidence: response.confidence,
         });
         
         socket.emit('chat:typing', { isTyping: false });
@@ -258,4 +294,3 @@ export const setupSocketHandlers = (io) => {
 };
 
 export default router;
-

@@ -1,33 +1,45 @@
-
 /**
  * Vector Store for RAG Pipeline
  * Implements document storage with embeddings for semantic search
  * 
- * Now includes:
- * - IPC dataset (JSON)
- * - BNS 2023 dataset (JSON)
- * - PDF Case Judgments from DataSet folder
+ * Using:
+ * - IPC sections (from HuggingFace/Kaggle with local fallback)
+ * - BNS 2023 sections (JSON from data folder)
  */
 
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { createEmbeddings } from './embeddings.js';
-import { loadAllPDFDocuments } from './pdfLoader.js';
+import { loadIPCDataset } from '../data/kaggleLoader.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load IPC data
-const ipcDataPath = join(__dirname, '../data/ipc_dataset.json');
-const ipcData = JSON.parse(readFileSync(ipcDataPath, 'utf-8'));
+// Load IPC data from Kaggle/HuggingFace with local fallback
+let ipcData = [];
+try {
+  console.log('Initializing IPC data loader...');
+  // Note: We load IPC data dynamically in initialize() to support async loading
+  console.log('IPC data will be loaded via kaggleLoader');
+} catch (error) {
+  console.error('Error setting up IPC loader:', error.message);
+}
 
-// Import BNS 2023 data
-import bns2023Data from '../data/data.js';
+// Load BNS 2023 data from data folder with error handling
+let bnsData = [];
+try {
+  const bnsModule = await import('../data/data.js');
+  bnsData = bnsModule.default || [];
+  if (!Array.isArray(bnsData)) {
+    console.warn('BNS data is not an array, using empty array');
+    bnsData = [];
+  }
+} catch (error) {
+  console.error('Error loading BNS data:', error.message);
+  bnsData = [];
+}
 
-const bnsData = bns2023Data || [];
-
-console.log('Loaded ' + ipcData.length + ' IPC sections');
 console.log('Loaded ' + bnsData.length + ' BNS 2023 sections');
 
 /**
@@ -43,7 +55,7 @@ class SimpleVectorStore {
 
   /**
    * Initialize the vector store with documents
-   * Now includes IPC, BNS 2023, and PDF case judgments
+   * Using IPC + BNS data from data folder only
    */
   async initialize() {
     if (this.initialized) return;
@@ -54,48 +66,85 @@ class SimpleVectorStore {
     this.embeddings = createEmbeddings();
     console.log('Embeddings model loaded');
 
+    // Load IPC data from Kaggle/HuggingFace with fallback to local
+    try {
+      ipcData = await loadIPCDataset();
+      console.log('Loaded ' + ipcData.length + ' IPC sections from Kaggle/HuggingFace');
+    } catch (error) {
+      console.error('Error loading IPC data from Kaggle:', error.message);
+      // Fallback: try loading from local file
+      try {
+        const ipcDataPath = join(__dirname, '../data/ipc_dataset.json');
+        const rawData = readFileSync(ipcDataPath, 'utf-8');
+        ipcData = JSON.parse(rawData);
+        console.log('Loaded ' + ipcData.length + ' IPC sections from local file');
+      } catch (localError) {
+        console.error('Error loading local IPC data:', localError.message);
+        ipcData = [];
+      }
+    }
+
     // Prepare documents from IPC data
-    const ipcDocs = ipcData.map((item) => ({
-      pageContent: item.title + ': ' + item.content,
-      metadata: {
-        section: item.section,
-        title: item.title,
-        source: 'IPC',
-      },
-    }));
+    const ipcDocs = ipcData
+      .filter(item => item && item.section && item.content)
+      .map((item) => ({
+        pageContent: (item.title || '') + ': ' + item.content,
+        metadata: {
+          section: item.section,
+          title: item.title || '',
+          source: 'IPC',
+          isStatute: true
+        },
+      }));
 
     // Prepare documents from BNS 2023 data
-    const bnsDocs = bnsData.map((item) => ({
-      pageContent: item.title + ': ' + item.content,
-      metadata: {
-        section: item.section,
-        title: item.title,
-        source: 'BNS 2023',
-      },
-    }));
+    const bnsDocs = bnsData
+      .filter(item => item && item.section && item.content)
+      .map((item) => ({
+        pageContent: (item.title || '') + ': ' + item.content,
+        metadata: {
+          section: item.section,
+          title: item.title || '',
+          source: 'BNS 2023',
+          isStatute: true
+        },
+      }));
 
-    // Load PDF documents from DataSet folder
-    console.log('Loading PDF documents from DataSet folder...');
-    const pdfDocs = await loadAllPDFDocuments();
-    console.log(`Loaded ${pdfDocs.length} PDF case documents`);
-
-    // Combine all documents (IPC + BNS + PDFs)
-    const allDocs = [...ipcDocs, ...bnsDocs, ...pdfDocs];
+    // Combine all documents (IPC + BNS only)
+    const allDocs = [...ipcDocs, ...bnsDocs];
     console.log('Total documents to embed: ' + allDocs.length);
+
+    if (allDocs.length === 0) {
+      console.warn('No documents to embed! Please check your data files.');
+      this.initialized = true;
+      return;
+    }
 
     // Generate embeddings for all documents
     console.log('Generating embeddings for RAG...');
     const texts = allDocs.map(doc => doc.pageContent);
-    const vectors = await this.embeddings.embedDocuments(texts);
+    
+    try {
+      const vectors = await this.embeddings.embedDocuments(texts);
 
-    // Store documents with their vectors
-    this.documents = allDocs.map((doc, index) => ({
-      ...doc,
-      vector: vectors[index],
-    }));
+      // Store documents with their vectors
+      this.documents = allDocs.map((doc, index) => ({
+        ...doc,
+        vector: vectors[index],
+      }));
 
-    this.initialized = true;
-    console.log('Vector store initialized with ' + this.documents.length + ' documents');
+      this.initialized = true;
+      console.log('Vector store initialized with ' + this.documents.length + ' documents');
+    } catch (error) {
+      console.error('Error generating embeddings:', error.message);
+      // Use fallback: store documents without embeddings
+      this.documents = allDocs.map((doc) => ({
+        ...doc,
+        vector: new Array(100).fill(0),
+      }));
+      this.initialized = true;
+      console.log('Vector store initialized with fallback embeddings');
+    }
   }
 
   /**
@@ -104,6 +153,11 @@ class SimpleVectorStore {
    */
   async similaritySearchWithScore(query, k = 3) {
     await this.initialize();
+
+    if (this.documents.length === 0) {
+      console.warn('No documents in vector store for search');
+      return [];
+    }
 
     // Get query embedding
     const queryVector = await this.embeddings.embedQuery(query);
@@ -125,6 +179,10 @@ class SimpleVectorStore {
    * Calculate cosine similarity between two vectors
    */
   cosineSimilarity(vec1, vec2) {
+    if (!vec1 || !vec2 || vec1.length !== vec2.length) {
+      return 0;
+    }
+    
     const dotProduct = vec1.reduce((sum, val, i) => sum + val * vec2[i], 0);
     const mag1 = Math.sqrt(vec1.reduce((sum, val) => sum + val * val, 0));
     const mag2 = Math.sqrt(vec2.reduce((sum, val) => sum + val * val, 0));
