@@ -28,14 +28,12 @@ const router = express.Router();
 
 const rawApiKey = process.env.GEMINI_API_KEY || "";
 const geminiApiKey = rawApiKey.trim();
-const hasPlaceholderKey = geminiApiKey === "your-gemini-api-key-here";
-// Use gemini-1.5-pro or gemini-1.0-pro for v1 API, with flash as fallback
-const geminiModel = (process.env.GEMINI_MODEL || 'gemini-1.5-pro').trim();
+console.log('GEMINI_API_KEY loaded:', geminiApiKey ? geminiApiKey.substring(0, 15) + '...' : 'EMPTY');
+const hasPlaceholderKey = geminiApiKey === process.env.GEMINI_API_KEY;
+const geminiModel = (process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim();
 
-if (!geminiApiKey || hasPlaceholderKey) {
-  throw new Error(
-    "GEMINI_API_KEY is missing or still set to placeholder. Update backend/.env with a real API key."
-  );
+if (!geminiApiKey || geminiApiKey.startsWith('replace_with') || geminiApiKey === 'YOUR_API_KEY_HERE') {
+  console.warn('WARNING: Using placeholder API key - Gemini calls will fail. Please add valid API key to backend/.env');
 }
 
 // Simple in-memory chat history
@@ -206,9 +204,10 @@ Legal Context: ${context}`;
   }
 }
 
+// Use v1beta API for gemini-1.5-flash model
 async function generateWithGemini(prompt) {
   const endpoint =
-    `https://generativelanguage.googleapis.com/v1/models/${encodeURIComponent(geminiModel)}:generateContent` +
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(geminiModel)}:generateContent` +
     `?key=${encodeURIComponent(geminiApiKey)}`;
 
   const response = await fetch(endpoint, {
@@ -224,7 +223,7 @@ async function generateWithGemini(prompt) {
       ],
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 500,
+        maxOutputTokens: 2048,
       },
     }),
   });
