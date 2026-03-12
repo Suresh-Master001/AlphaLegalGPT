@@ -11,7 +11,8 @@ import pdf from 'pdf-parse';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const datasetPath = join(__dirname, '../../DataSet');
+// Point to the server/data folder where IPC_DataPDF.pdf is located
+const datasetPath = join(__dirname, '../data');
 
 /**
  * Load and parse a single PDF file
@@ -25,16 +26,26 @@ async function loadPDF(filePath) {
     
     const fileName = filePath.split(/[\\/]/).pop();
     
-    return {
-      pageContent: data.text,
-      metadata: {
-        caseNumber: fileName.replace('.pdf', ''),
-        fileName: fileName,
-        source: 'Case Judgment',
-        isStatute: false,
-        year: extractYear(fileName)
-      }
-    };
+    // Split PDF by pages for better RAG retrieval
+    const pages = data.text.split(/\n\s*\n/); // Split by double newlines (page breaks)
+    
+    // Return an array of documents, one per page/section
+    const documents = pages
+      .filter(page => page && page.trim().length > 50) // Filter out empty/short pages
+      .map((pageContent, pageIndex) => ({
+        pageContent: pageContent.trim(),
+        metadata: {
+          caseNumber: fileName.replace('.pdf', '') + '_page' + (pageIndex + 1),
+          fileName: fileName,
+          source: 'Case Judgment',
+          pageNumber: pageIndex + 1,
+          isStatute: false,
+          year: extractYear(fileName)
+        }
+      }));
+    
+    console.log(`Loaded PDF: ${fileName} - split into ${documents.length} pages/sections`);
+    return documents.length > 0 ? documents : null;
   } catch (error) {
     console.error(`Error loading PDF ${filePath}:`, error.message);
     return null;
@@ -67,7 +78,12 @@ export async function loadAllPDFDocuments() {
       const filePath = join(datasetPath, pdfFile);
       const doc = await loadPDF(filePath);
       if (doc) {
-        documents.push(doc);
+        // If doc is an array (multiple pages), spread it into documents
+        if (Array.isArray(doc)) {
+          documents.push(...doc);
+        } else {
+          documents.push(doc);
+        }
       }
     }
     

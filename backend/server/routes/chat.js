@@ -181,7 +181,9 @@ Legal Context: ${context}`;
     if (relevantDoc.isStatute) {
       answer = `${relevantDoc.section} - ${relevantDoc.title}: ${relevantDoc.content}`;
     } else {
-      answer = `Case ${relevantDoc.section}: ${relevantDoc.content?.substring(0, 400)}...`;
+      // Show more content from PDF (up to 2000 characters)
+      const content = relevantDoc.content || relevantDoc.pageContent || '';
+      answer = `Case ${relevantDoc.section || relevantDoc.metadata?.caseNumber || 'Unknown'}: ${content.substring(0, 2000)}`;
     }
 
     const isQuotaOrRateLimited = geminiError?.status === 429;
@@ -222,8 +224,8 @@ async function generateWithGemini(prompt) {
         },
       ],
       generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 2048,
+        temperature: 0.3,
+        maxOutputTokens: 4096,
       },
     }),
   });

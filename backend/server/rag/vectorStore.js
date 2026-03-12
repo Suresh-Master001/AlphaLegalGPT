@@ -4,6 +4,7 @@
  * 
  * Using:
  * - IPC sections (from HuggingFace/Kaggle with local fallback)
+ * - IPC PDF Data (IPC_DataPDF.pdf)
  * - BNS 2023 sections (JSON from data folder)
  */
 
@@ -12,6 +13,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { createEmbeddings } from './embeddings.js';
 import { loadIPCDataset } from '../data/kaggleLoader.js';
+import { loadAllPDFDocuments } from './pdfLoader.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -28,19 +30,7 @@ try {
 
 // Load BNS 2023 data from data folder with error handling
 let bnsData = [];
-try {
-  const bnsModule = await import('../data/data.js');
-  bnsData = bnsModule.default || [];
-  if (!Array.isArray(bnsData)) {
-    console.warn('BNS data is not an array, using empty array');
-    bnsData = [];
-  }
-} catch (error) {
-  console.error('Error loading BNS data:', error.message);
-  bnsData = [];
-}
-
-console.log('Loaded ' + bnsData.length + ' BNS 2023 sections');
+// Note: BNS data is now loaded inside initialize() to support async loading properly
 
 /**
  * In-memory Vector Store with cosine similarity
@@ -65,6 +55,20 @@ class SimpleVectorStore {
     // Initialize embeddings
     this.embeddings = createEmbeddings();
     console.log('Embeddings model loaded');
+
+    // Load BNS 2023 data dynamically
+    try {
+      const bnsModule = await import('../data/data.js');
+      bnsData = bnsModule.default || [];
+      if (!Array.isArray(bnsData)) {
+        console.warn('BNS data is not an array, using empty array');
+        bnsData = [];
+      }
+      console.log('Loaded ' + bnsData.length + ' BNS 2023 sections');
+    } catch (error) {
+      console.error('Error loading BNS data:', error.message);
+      bnsData = [];
+    }
 
     // Load IPC data from Kaggle/HuggingFace with fallback to local
     try {
@@ -110,9 +114,35 @@ class SimpleVectorStore {
         },
       }));
 
-    // Combine all documents (IPC + BNS only)
-    const allDocs = [...ipcDocs, ...bnsDocs];
+    // Load IPC PDF data (PRIMARY SOURCE - only use PDF for responses)
+    let pdfDocs = [];
+    try {
+      const pdfDocuments = await loadAllPDFDocuments();
+      console.log('Loaded ' + pdfDocuments.length + ' documents from IPC_DataPDF.pdf');
+      
+      // Process PDF documents
+      pdfDocs = pdfDocuments
+        .filter(doc => doc && doc.pageContent)
+        .map((doc) => ({
+          pageContent: doc.pageContent,
+          metadata: {
+            section: doc.metadata?.caseNumber || 'Unknown',
+            title: doc.metadata?.fileName || '',
+            source: 'IPC PDF',
+            isStatute: false
+          },
+        }));
+    } catch (pdfError) {
+      console.error('Error loading PDF data:', pdfError.message);
+      pdfDocs = [];
+    }
+
+    // Use BOTH IPC JSON data and PDF data for comprehensive responses
+    const allDocs = [...ipcDocs, ...bnsDocs, ...pdfDocs];
     console.log('Total documents to embed: ' + allDocs.length);
+    console.log('  - IPC sections: ' + ipcDocs.length);
+    console.log('  - BNS sections: ' + bnsDocs.length);
+    console.log('  - PDF documents: ' + pdfDocs.length);
 
     if (allDocs.length === 0) {
       console.warn('No documents to embed! Please check your data files.');
