@@ -44,7 +44,7 @@ const chatHistory = new Map();
  * Handle chat requests with RAG + Gemini
  * Supports language parameter: 'en' (English) or 'ta' (Tamil)
  */
-router.post('/chat', async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { query, sessionId, language = 'en' } = req.body;
     
@@ -88,13 +88,13 @@ router.post('/chat', async (req, res) => {
   }
 });
 
-router.get('/chat/history/:sessionId', (req, res) => {
+router.get('/history/:sessionId', (req, res) => {
   const { sessionId } = req.params;
   const history = chatHistory.get(sessionId) || [];
   res.json({ history });
 });
 
-router.delete('/chat/history/:sessionId', (req, res) => {
+router.delete('/history/:sessionId', (req, res) => {
   const { sessionId } = req.params;
   chatHistory.delete(sessionId);
   res.json({ success: true });
@@ -168,9 +168,22 @@ Legal Context: ${context}`;
       console.log('JSON parse failed, using raw response');
     }
     
+    // Translate to Tamil if needed (post-generation)
+    let finalAnswer = responseText;
+    if (language === 'ta') {
+      try {
+        const translatePrompt = `Translate the following legal explanation to natural, fluent Tamil (தமிழ்). Keep legal terms accurate. Do not add extra content:
+
+Original: ${responseText}`;
+        finalAnswer = await generateWithGemini(translatePrompt);
+      } catch (translateError) {
+        console.warn('Translation failed, using original:', translateError.message);
+      }
+    }
+
     // Return as structured response
     return {
-      answer: responseText,
+      answer: finalAnswer,
       citations: citations,
       section_title: sectionTitle,
       confidence: documents.length > 0 ? 0.85 : 0
@@ -271,9 +284,22 @@ export const setupSocketHandlers = (io) => {
         const retrievalResult = await retrieveAndPrepareContext(query);
         const response = await generateFriendlyResponse(query, retrievalResult, normalizedLanguage);
         
+        // Translate to Tamil if needed (post-generation for streaming)
+        let finalAnswer = response.answer;
+        if (normalizedLanguage === 'ta') {
+          try {
+            const translatePrompt = `Translate to natural fluent Tamil (தமிழ்). Keep legal accuracy:
+
+${response.answer}`;
+            finalAnswer = await generateWithGemini(translatePrompt);
+          } catch (translateError) {
+            console.warn('Socket translation failed:', translateError);
+          }
+        }
+
         // Send complete response
         socket.emit('chat:complete', {
-          answer: response.answer,
+          answer: finalAnswer,
           citations: response.citations,
           section_title: response.section_title,
           confidence: response.confidence,

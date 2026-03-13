@@ -230,9 +230,10 @@ export const useChat = () => {
       socket.on('chat:typing', handleTyping);
       
       // Send message
-      socket.emit('chat:message', {
+socket.emit('chat:message', {
         query: content,
         sessionId: currentChatId || 'default',
+        language: localStorage.getItem('language') || 'en'
       });
       
     } catch (err) {

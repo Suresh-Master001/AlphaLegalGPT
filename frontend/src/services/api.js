@@ -3,6 +3,26 @@ import { io } from 'socket.io-client';
 const API_BASE_URL = '/api';
 const SOCKET_URL = window.location.origin;
 
+const getStoredToken = () => {
+  return localStorage.getItem('authToken') || localStorage.getItem('token');
+};
+
+/**
+ * Get auth headers
+ */
+const getAuthHeaders = () => {
+  const token = getStoredToken();
+  if (token) {
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
+  }
+  return {
+    'Content-Type': 'application/json'
+  };
+};
+
 /**
  * Socket.io client instance
  */
@@ -57,9 +77,7 @@ export const sendChatMessage = async (query, sessionId = 'default') => {
   try {
     const response = await fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ query, sessionId }),
     });
 
@@ -86,33 +104,24 @@ export const sendChatMessageStream = (query, sessionId = 'default', callbacks = 
   }
 
   return new Promise((resolve, reject) => {
-    // Set up event listeners
     const handleStreaming = (data) => {
-      if (onMessage) {
-        onMessage(data);
-      }
+      if (onMessage) onMessage(data);
     };
 
     const handleComplete = (data) => {
       cleanup();
-      if (onComplete) {
-        onComplete(data);
-      }
+      if (onComplete) onComplete(data);
       resolve(data);
     };
 
     const handleError = (data) => {
       cleanup();
-      if (onError) {
-        onError(data);
-      }
+      if (onError) onError(data);
       reject(new Error(data.error || 'Unknown error'));
     };
 
     const handleTyping = (data) => {
-      if (onTyping) {
-        onTyping(data);
-      }
+      if (onTyping) onTyping(data);
     };
 
     const cleanup = () => {
@@ -122,21 +131,21 @@ export const sendChatMessageStream = (query, sessionId = 'default', callbacks = 
       socket.off('chat:typing', handleTyping);
     };
 
-    // Register listeners
     socket.on('chat:streaming', handleStreaming);
     socket.on('chat:complete', handleComplete);
     socket.on('chat:error', handleError);
     socket.on('chat:typing', handleTyping);
 
-    // Send message
-    socket.emit('chat:message', { query, sessionId, language: localStorage.getItem('language') || 'en' });
+    socket.emit('chat:message', { 
+      query, 
+      sessionId, 
+      language: localStorage.getItem('language') || 'en', 
+      token: getStoredToken()
+    });
 
-    // Handle timeout
     setTimeout(() => {
-      if (!socket.hasListeners('chat:complete')) {
-        cleanup();
-        reject(new Error('Request timeout'));
-      }
+      cleanup();
+      reject(new Error('Request timeout'));
     }, 60000);
   });
 };
@@ -146,7 +155,9 @@ export const sendChatMessageStream = (query, sessionId = 'default', callbacks = 
  */
 export const getChatHistory = async (sessionId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/chat/history/${sessionId}`);
+    const response = await fetch(`${API_BASE_URL}/chat/history/${sessionId}`, {
+      headers: getAuthHeaders()
+    });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -165,10 +176,76 @@ export const clearChatHistory = async (sessionId) => {
   try {
     const response = await fetch(`${API_BASE_URL}/chat/history/${sessionId}`, {
       method: 'DELETE',
+      headers: getAuthHeaders()
     });
     return await response.json();
   } catch (error) {
     console.error('Error clearing chat history:', error);
+    throw error;
+  }
+};
+
+/**
+ * Auth API methods
+ */
+export const loginUser = async (email, password) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email, password }),
+    });
+    if (!response.ok) throw new Error('Login failed');
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Login error:', error);
+    throw error;
+  }
+};
+
+export const signupUser = async (name, email, password) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ name, email, password }),
+    });
+    if (!response.ok) throw new Error('Signup failed');
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Signup error:', error);
+    throw error;
+  }
+};
+
+export const verifyOTP = async (email, otp) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email, otp }),
+    });
+    if (!response.ok) throw new Error('OTP verification failed');
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('OTP verification error:', error);
+    throw error;
+  }
+};
+
+export const resendOTP = async (email) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/resend-otp`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email }),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Resend OTP error:', error);
     throw error;
   }
 };

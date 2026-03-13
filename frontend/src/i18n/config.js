@@ -8,6 +8,33 @@ const resources = {
       appName: 'AlphaLegalGPT',
       appSubtitle: 'AI Legal Assistant',
       
+      // Auth
+      welcomeBack: 'Welcome Back',
+      loginSubtitle: 'Sign in to your AlphaLegalGPT account',
+      email: 'Email',
+      password: 'Password',
+      enterEmail: 'Enter your email',
+      enterPassword: 'Enter your password',
+      signingIn: 'Signing in...',
+      signIn: 'Sign In',
+      orContinueWith: 'Or continue with',
+      noAccount: "Don't have an account?",
+      signUp: 'Sign up',
+      invalidCredentials: 'Invalid email or password',
+      
+      createAccount: 'Create Account',
+      signupSubtitle: 'Join AlphaLegalGPT today',
+      fullName: 'Full Name',
+      enterFullName: 'Enter your full name',
+      confirmPassword: 'Confirm Password',
+      passwordsMismatch: 'Passwords do not match',
+      creatingAccount: 'Creating Account...',
+      createAccountBtn: 'Create Account',
+      alreadyHaveAccount: 'Already have an account?',
+      verifyOTP: 'Verify OTP',
+      otpSentTo: 'We sent a 6-digit code to',
+      verifyOTPBtn: 'Verify OTP',
+      
       // Sidebar
       newChat: 'New Chat',
       chatHistory: 'Chat History',
@@ -42,6 +69,7 @@ const resources = {
       errorOccurred: 'An error occurred',
       tryAgain: 'Please try again',
       connectionError: 'Connection error. Please check your internet.',
+      signupError: 'Signup failed. Please try again.',
       
       // Footer
       poweredBy: 'Powered by',
@@ -53,6 +81,33 @@ const resources = {
       // App
       appName: 'அல்பாஎல்கல்ஜிபிடி',
       appSubtitle: 'AI சட்ட உதவியாளர்',
+      
+      // Auth
+      welcomeBack: 'வரவேற்கிறோம்',
+      loginSubtitle: 'உங்கள் AlphaLegalGPT கணக்கில் உள்நுழையவும்',
+      email: 'மின்னஞ்சல்',
+      password: 'பாஸ்வேர்ட்',
+      enterEmail: 'உங்கள் மின்னஞ்சலை உள்ளிடவும்',
+      enterPassword: 'உங்கள் பாஸ்வேர்டை உள்ளிடவும்',
+      signingIn: 'உள்நுழைகிறது...',
+      signIn: 'உள்நுழையவும்',
+      orContinueWith: 'அல்லது இதன் மூலம் தொடரவும்',
+      noAccount: 'கணக்கு இல்லையா?',
+      signUp: 'பதிவு செய்யவும்',
+      invalidCredentials: 'தவறான மின்னஞ்சல் அல்லது பாஸ்வேர்ட்',
+      
+      createAccount: 'கணக்கு உருவாக்கு',
+      signupSubtitle: 'இன்று AlphaLegalGPT-ல் சேருங்கள்',
+      fullName: 'முழு பெயர்',
+      enterFullName: 'உங்கள் முழு பெயரை உள்ளிடவும்',
+      confirmPassword: 'பாஸ்வேர்டை உறுதிப்படுத்தவும்',
+      passwordsMismatch: 'பாஸ்வேர்டுகள் ஒத்துப்போகவில்லை',
+      creatingAccount: 'கணக்கு உருவாக்கப்படுகிறது...',
+      createAccountBtn: 'கணக்கு உருவாக்கு',
+      alreadyHaveAccount: 'இதற்கு முன் கணக்கு உள்ளதா?',
+      verifyOTP: 'OTP ஐ உறுதிப்படுத்தவும்',
+      otpSentTo: '6-எண் குறியீடு அனுப்பப்பட்டது',
+      verifyOTPBtn: 'OTP ஐ உறுதிப்படுத்தவும்',
       
       // Sidebar
       newChat: 'புதிய உரையாடல்',
@@ -88,6 +143,7 @@ const resources = {
       errorOccurred: 'பிழை ஏற்பட்டது',
       tryAgain: 'மீண்டும் முயற்சிக்கவும்',
       connectionError: 'இணைப்புப் பிழை. உங்கள் இணையத்தைச் சரிபார்க்கவும்.',
+      signupError: 'பதிவு தோல்வியடைந்தது. மீண்டும் முயற்சிக்கவும்.',
       
       // Footer
       poweredBy: 'இயக்கப்படுகிறது',
