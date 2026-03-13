@@ -13,18 +13,17 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('authToken'));
-  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('authToken'));
+  const [token, setToken] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      // Mock user - replace with real API call
-      setUser({ email: 'user@example.com', name: 'Demo User' });
-      setToken(token);
-      setIsAuthenticated(true);
-    }
+    // Force login on every app open by clearing any persisted auth
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('token');
+    setUser(null);
+    setToken(null);
+    setIsAuthenticated(false);
     setLoading(false);
   }, []);
 
