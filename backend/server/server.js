@@ -114,7 +114,26 @@ const initializeApp = async () => {
   try {
     // Connect to MongoDB
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/alphalegalgpt';
-    await mongoose.connect(mongoUri);
+    
+    // Validate MongoDB URI format
+    const isValidMongoUri = mongoUri.startsWith('mongodb://') || 
+                            mongoUri.startsWith('mongodb+srv://') || 
+                            mongoUri.startsWith('mongodb+');
+    
+    if (!isValidMongoUri || mongoUri.length < 10) {
+      console.error(`❌ Invalid MONGODB_URI: "${mongoUri}"`);
+      console.log('ℹ️  Expected format: mongodb://localhost:27017/dbname or mongodb+srv://...');
+      console.log('ℹ️  Falling back to local MongoDB for development');
+      
+      // Only use localhost fallback in development
+      if (process.env.NODE_ENV !== 'production') {
+        await mongoose.connect('mongodb://localhost:27017/alphalegalgpt');
+      } else {
+        throw new Error('MONGODB_URI is not configured correctly for production');
+      }
+    } else {
+      await mongoose.connect(mongoUri);
+    }
     console.log('✅ Connected to MongoDB');
 
     // Seed default admin user if not exists
