@@ -1,10 +1,13 @@
 import { io } from 'socket.io-client';
 
-const API_BASE_URL = '/api';
-const SOCKET_URL = window.location.origin;
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
 
 const getStoredToken = () => {
-  return localStorage.getItem('authToken') || localStorage.getItem('token');
+  return localStorage.getItem('authToken') || 
+         localStorage.getItem('token') || 
+         sessionStorage.getItem('authToken') || 
+         sessionStorage.getItem('token');
 };
 
 /**
@@ -195,7 +198,10 @@ export const loginUser = async (email, password) => {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ email, password }),
     });
-    if (!response.ok) throw new Error('Login failed');
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || 'Login failed');
+    }
     const data = await response.json();
     return data;
   } catch (error) {
@@ -211,7 +217,10 @@ export const signupUser = async (name, email, password) => {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ name, email, password }),
     });
-    if (!response.ok) throw new Error('Signup failed');
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || 'Signup failed');
+    }
     const data = await response.json();
     return data;
   } catch (error) {
@@ -227,7 +236,10 @@ export const verifyOTP = async (email, otp) => {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ email, otp }),
     });
-    if (!response.ok) throw new Error('OTP verification failed');
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || 'OTP verification failed');
+    }
     const data = await response.json();
     return data;
   } catch (error) {
@@ -243,9 +255,50 @@ export const resendOTP = async (email) => {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ email }),
     });
-    return await response.json();
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || 'Failed to resend OTP');
+    }
+    const data = await response.json();
+    return data;
   } catch (error) {
     console.error('Resend OTP error:', error);
+    throw error;
+  }
+};
+
+export const forgotPassword = async (email) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email }),
+    });
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || 'Failed to request password reset');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Forgot Password error:', error);
+    throw error;
+  }
+};
+
+export const resetPassword = async (email, otp, newPassword) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email, otp, newPassword }),
+    });
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || 'Failed to reset password');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Reset Password error:', error);
     throw error;
   }
 };
@@ -260,6 +313,37 @@ export const checkHealth = async () => {
   } catch (error) {
     console.error('Health check failed:', error);
     return { status: 'error' };
+  }
+};
+
+/**
+ * Upload Document
+ */
+export const uploadDocument = async (file) => {
+  try {
+    const formData = new FormData();
+    formData.append('document', file);
+    
+    const headers = {};
+    const token = getStoredToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || 'Document upload failed');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Upload document error:', error);
+    throw error;
   }
 };
 

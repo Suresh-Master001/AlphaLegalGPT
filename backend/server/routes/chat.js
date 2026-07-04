@@ -1,24 +1,13 @@
-
-/**
- * Chat Routes with RAG + Gemini
- * Implements Retrieval Augmented Generation for legal Q&A
- * Uses Gemini to generate user-friendly responses
- * 
- * Supports:
- * - IPC sections (JSON)
- * - BNS 2023 sections (JSON)
- */
-
 import express from 'express';
+import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { retrieveAndPrepareContext } from '../rag/retriever.js';
-import { 
-  getGreetingResponse, 
-  getErrorResponse, 
-  isSupportedLanguage 
-} from '../i18n.js';
+import { Chat } from '../data/models/Chat.js';
+import { User } from '../data/models/User.js';
+import { GlobalHistory } from '../data/models/GlobalHistory.js';
+import { LocalSearch } from '../data/search/LocalSearch.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -26,543 +15,363 @@ dotenv.config({ path: join(__dirname, '../../.env') });
 
 const router = express.Router();
 
-const systemPrompt = `
-You are AttorneyGPT, a professional AI legal assistant designed to answer questions about the Indian Penal Code (IPC).
-
-Your job is to help users understand IPC laws in a simple and accurate way using the provided legal dataset.
-
-Core Responsibilities:
-
-1. Understand the user’s query from the chat window.
-2. Identify the relevant IPC section from the provided dataset.
-3. Answer in clear and simple language.
-4. Provide the IPC section number and title.
-5. Return responses in structured JSON format.
-
-Response Format:
-
-{
-  "answer": "Simple explanation of the law",
-  "citations": ["IPC Section Number"],
-  "section_title": "Official section title",
-  "confidence": 0.85
-}
-
-Response Guidelines:
-
-• Always base your answer only on the provided IPC dataset.
-• Do not invent laws or legal sections.
-• If multiple sections are relevant, return the most relevant one.
-• Use simple language suitable for general users.
-• Avoid complex legal jargon unless necessary.
-
-Semantic Understanding:
-
-The user may not always mention the exact IPC section.
-
-Examples:
-
-If user asks:
-"What law punishes cheating in India?"
-
-You should match it to:
-IPC Section 420 – Cheating and dishonestly inducing delivery of property.
-
-If user asks:
-"What happens if someone steals a bike?"
-
-You should match it to:
-IPC Section 379 – Theft.
-
-Multilingual Support:
-
-You may receive queries in English or Tamil.
-
-Examples:
-
-Tamil Query:
-"IPC 420 என்றால் என்ன?"
-
-Interpretation:
-Explain IPC Section 420.
-
-Tamil Query:
-"திருட்டுக்கு இந்திய சட்டத்தில் என்ன தண்டனை?"
-
-Interpretation:
-IPC Section 379 – Theft.
-
-Fallback Rule:
-
-If no relevant IPC section is found in the dataset, respond with:
-
-{
-  "answer": "I could not find an exact IPC reference for your question. Please consult a legal professional.",
-  "citations": [],
-  "section_title": null,
-  "confidence": 0.0
-}
-
-Professional Tone:
-
-• Neutral
-• Informative
-• Helpful
-• Non-judgmental
-
-Example Response:
-
-User Query:
-"What is IPC Section 420?"
-
-Response:
-
-{
-  "answer": "IPC Section 420 deals with cheating and dishonestly inducing a person to deliver property. If someone deceives another person to obtain money or property, they can be punished under this section.",
-  "citations": ["IPC Section 420"],
-  "section_title": "Cheating and dishonestly inducing delivery of property",
-  "confidence": 0.92
-}
-`;
-
-const rawApiKey = process.env.GEMINI_API_KEY || "";
-const geminiApiKey = rawApiKey.trim();
-console.log('GEMINI_API_KEY loaded:', geminiApiKey ? geminiApiKey.substring(0, 15) + '...' : 'EMPTY');
-const geminiModel = (process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim();
-
-const canUseGemini =
-  !!geminiApiKey &&
-  !geminiApiKey.startsWith('replace_with') &&
-  geminiApiKey !== 'YOUR_API_KEY_HERE';
-
-if (!canUseGemini) {
-  console.warn('WARNING: Using placeholder API key - Gemini calls will fail. Please add valid API key to backend/.env');
-}
-
-// Simple in-memory chat history
-const chatHistory = new Map();
-
-const COMPLEX_KEYWORDS = [
-  'explain',
-  'analysis',
-  'analyze',
-  'difference',
-  'compare',
-  'procedure',
-  'steps',
-  'how to',
-  'what is the punishment',
-  'appeal',
-  'bail',
-  'jurisdiction',
-  'cognizable',
-  'non-cognizable',
-  'compoundable',
-  'summary',
-];
-
-const isComplexQuery = (query) => {
-  const text = (query || '').trim();
-  if (!text) return false;
-  const wordCount = text.split(/\s+/).length;
-  const questionCount = (text.match(/\?/g) || []).length;
-  const lower = text.toLowerCase();
-  const hasKeyword = COMPLEX_KEYWORDS.some((kw) => lower.includes(kw));
-  return wordCount >= 18 || text.length >= 120 || questionCount > 1 || hasKeyword;
+const getApiKey = () => {
+  dotenv.config({ path: join(__dirname, '../../.env'), override: true });
+  return process.env.GEMINI_API_KEY?.trim();
 };
 
-const buildRetrievalOnlyResponse = (retrievalResult) => {
-  const { documents, citations, confidence } = retrievalResult;
-  const relevantDoc = documents[0];
-  if (!relevantDoc) {
-    return {
-      answer: "I could not find an exact IPC reference for your question. Please consult a legal professional.",
-      citations: [],
-      section_title: "",
-      confidence: 0
-    };
-  }
-
-  const sectionTitle = relevantDoc.title || relevantDoc.section || '';
-  let answer = '';
-  if (relevantDoc.isStatute) {
-    answer = `${relevantDoc.section} - ${relevantDoc.title}: ${relevantDoc.content}`;
+const getGenAI = () => {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    console.error('❌ Chat API: GEMINI_API_KEY is missing in .env!');
   } else {
-    const content = relevantDoc.content || relevantDoc.pageContent || '';
-    answer = `Case ${relevantDoc.section || relevantDoc.metadata?.caseNumber || 'Unknown'}: ${content.substring(0, 2000)}`;
+    // console.log(`🔑 Chat API: Using key starting with: ${apiKey.slice(0, 10)}... (Reloaded)`);
   }
-
-  return {
-    answer: formatResponseAnswer(answer, 200),
-    citations: citations || [],
-    section_title: sectionTitle,
-    confidence: confidence || (documents.length > 0 ? 0.7 : 0)
-  };
+  return new GoogleGenerativeAI(apiKey || '');
 };
 
-const formatResponseAnswer = (text, maxWords = 200) => {
-  const safeText = String(text || '').replace(/\s+/g, ' ').trim();
-  if (!safeText) return '';
+const LEGAL_FALLBACK_EN = "I am sorry, but I am an AI Legal Assistant and I can only help with law or legal-related questions.";
+const LEGAL_FALLBACK_TA = "மன்னிக்கவும், நான் ஒரு AI சட்ட உதவியாளர் மற்றும் சட்டம் தொடர்பான கேள்விகளுக்கு மட்டுமே என்னால் உதவ முடியும்.";
 
-  const words = safeText.split(' ');
-  const trimmed = words.slice(0, Math.max(1, maxWords)).join(' ');
+const getSystemPrompt = (languageCode, location) => {
+  const isTamil = languageCode === 'ta' || languageCode === 'tamil';
+  // Dynamic language selection based on user's preference
+  const defaultLanguage = isTamil ? "Tamil" : "English";
+  const fallbackMessage = isTamil ? LEGAL_FALLBACK_TA : LEGAL_FALLBACK_EN;
 
-  const rawPoints = trimmed
-    .split(/(?:\n+|\. |\? |\! )/g)
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const points = rawPoints.length > 0 ? rawPoints : [trimmed];
-  const maxPoints = 8;
-  const finalPoints = points.slice(0, maxPoints);
-
-  return finalPoints.map((p) => `- ${p.replace(/[.:;,\s]+$/g, '')}.`).join('\n');
-};
-
-const reformatWithGemini = async (response, language = 'en') => {
-  if (!canUseGemini) {
-    return {
-      ...response,
-      answer: formatResponseAnswer(response.answer, 200)
-    };
-  }
-
-  const languageInstruction = language === 'ta'
-    ? 'Respond in Tamil language (தமிழ்).'
-    : 'Respond in English.';
-
-  const prompt = `
-You are formatting a legal assistant response. Output ONLY valid JSON (no extra text).
-
-Rules:
-- Keep the meaning faithful to the provided answer and citations.
-- Format the answer as point-by-point bullet list.
-- Summarize to a maximum of 200 words.
-- Preserve section title and citations.
-- If citations are empty, keep them empty.
-
-${languageInstruction}
-
-Input JSON:
-${JSON.stringify({
-  answer: response.answer,
-  citations: response.citations,
-  section_title: response.section_title,
-  confidence: response.confidence
-})}
-
-Output JSON format:
-{
-  "answer": "- point one\\n- point two",
-  "citations": ["IPC Section Number"],
-  "section_title": "Official section title",
-  "confidence": 0.85
-}
+  const distanceConstraint = `
+STRICT CONSTRAINT: You MUST only suggest offices within a 1 meter to 10 km radius. Do NOT provide "long directions" (beyond 10km). If an office is likely further away, inform the user you cannot find any within the 10km limit.
+Always add a note: "${isTamil ? '10 கி.மீ சுற்றளவுக்குள் அலுவலகங்களைத் தேடுகிறது...' : 'Searching for offices within a 10 km radius...'}" when providing these links.
 `;
 
-  try {
-    const responseText = await generateWithGemini(prompt);
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return {
-        answer: formatResponseAnswer(parsed.answer || response.answer, 200),
-        citations: Array.isArray(parsed.citations) ? parsed.citations : response.citations,
-        section_title: parsed.section_title || response.section_title,
-        confidence: typeof parsed.confidence === 'number' ? parsed.confidence : response.confidence
-      };
-    }
-  } catch (error) {
-    console.warn('Gemini reformat failed, using local formatting:', error.message);
+  let locationContext = "";
+  if (location && location.lat && location.lng) {
+    locationContext = `
+USER LOCATION: Latitude ${location.lat}, Longitude ${location.lng}
+The user HAS enabled location sharing. Your primary goal is to guide them to the ACTUAL physical offices where they can solve their legal issue.
+Whenever the user's question relates to a specific government service or legal process, you MUST provide a Google Maps search link for the relevant office nearby.
+
+${distanceConstraint}
+
+- Supreme Court: https://www.google.com/maps/search/Supreme+Court+of+India/@${location.lat},${location.lng},13z
+- High Court: https://www.google.com/maps/search/High+Court/@${location.lat},${location.lng},13z
+- District/Sessions/Magistrate Court: https://www.google.com/maps/search/District+Court/@${location.lat},${location.lng},13z
+- Police Station (AWPS/Traffic/Cyber): https://www.google.com/maps/search/Police+Station/@${location.lat},${location.lng},13z
+- CBI/NIA/ED/NCB: https://www.google.com/maps/search/CBI+office/@${location.lat},${location.lng},13z
+- VAO/RI/Taluk/Collector Office: https://www.google.com/maps/search/Taluk+Office/@${location.lat},${location.lng},13z
+- BDO Office / Panchayat Union: https://www.google.com/maps/search/BDO+Office/@${location.lat},${location.lng},13z
+- Agriculture Office: https://www.google.com/maps/search/Agriculture+Office/@${location.lat},${location.lng},13z
+- Veterinary Hospital: https://www.google.com/maps/search/Veterinary+Hospital/@${location.lat},${location.lng},13z
+- Primary Health Centre (PHC): https://www.google.com/maps/search/PHC+Hospital/@${location.lat},${location.lng},13z
+- Ration Shop / PDS Center: https://www.google.com/maps/search/Ration+Shop/@${location.lat},${location.lng},13z
+- Human Rights/Women Commission: https://www.google.com/maps/search/Human+Rights+Commission/@${location.lat},${location.lng},13z
+- Municipality/Corporation/Water Board: https://www.google.com/maps/search/Municipality+Office/@${location.lat},${location.lng},13z
+- Electricity Board (EB/TANGEDCO): https://www.google.com/maps/search/EB+Office/@${location.lat},${location.lng},13z
+
+${isTamil ? 'முக்கியக் குறிப்பு: ஒரு அலுவலகம் 10 கிமீ சுற்றளவுக்கு வெளியே இருந்தால், அதைத் தெளிவாகக் குறிப்பிடவும் (எ.கா. "இந்த அலுவலகம் 10 கிமீ சுற்றளவுக்கு வெளியே உள்ளது").' : 'IMPORTANT: If an office is likely outside the 10km radius (e.g. Supreme Court, High Court, CBI HQ), explicitly mention: "This office is likely outside the 10km radius".'}
+
+Always tell the user: "${isTamil ? 'அருகிலுள்ள [Office Name] ஐ 10 கிமீக்குள் இங்கே காணலாம்: [Link]' : 'You can find the nearest [Office Name] within 10 km here: [Link]'}"
+`;
+  } else {
+    locationContext = `
+USER LOCATION: [NOT PROVIDED]
+The user has NOT enabled location sharing or it is unavailable.
+${distanceConstraint}
+If the user asks for directions or nearby offices, you MUST NOT guess any address. Instead, politely ask the user to enable their location using the map icon in the chat input to find offices within a 10km radius.
+`;
   }
 
-  return {
-    ...response,
-    answer: formatResponseAnswer(response.answer, 200)
-  };
+  return `You are AI LegalGPT, a professional Indian legal assistant.
+Your scope is STRICTLY LIMITED to law, legal procedures, Indian statutes, and legal advice.
+If a user asks a question that is NOT related to law or legal matters (e.g., general knowledge, personal advice, random facts, jokes, or non-legal topics), you MUST NOT answer it.
+Instead, you must respond ONLY with the following exact message: "${fallbackMessage}"
+${locationContext}
+IMPORTANT: 
+1. You MUST answer strictly in the ${defaultLanguage} language.
+2. If the user specifically requests a different language (e.g., "in Tamil", "in English"), you can use that language.
+3. Do not mention datasets or training data.
+4. Provide simple, accurate explanations of Indian law suitable for the general public.`;
 };
 
-/**
- * POST /api/chat
- * Handle chat requests with RAG + Gemini
- * Supports language parameter: 'en' (English) or 'ta' (Tamil)
- */
+// POST /api/chat
 router.post('/', async (req, res) => {
   try {
-    const { query, sessionId, language = 'en' } = req.body;
-    
+    const { query, language, location, realtime } = req.body;
+    const isRealtimeRequest = realtime !== false;
+    const apiKey = getApiKey();
+
     if (!query) {
       return res.status(400).json({ error: 'Query is required' });
     }
-    
-    // Validate and normalize language (fallback to 'en' if unsupported)
-    const normalizedLanguage = isSupportedLanguage(language) ? language : 'en';
-    
-    console.log(`Processing request for: ${query} [lang: ${normalizedLanguage}]`);
-    
-    // Step 1: Retrieve relevant documents using RAG
-    const retrievalResult = await retrieveAndPrepareContext(query);
 
-    // Step 2: Use Gemini only for complex queries; simple queries return retrieval-only response
-    const useGemini = isComplexQuery(query);
-    let response = useGemini
-      ? await generateFriendlyResponse(query, retrievalResult, normalizedLanguage)
-      : buildRetrievalOnlyResponse(retrievalResult);
-    response = await reformatWithGemini(response, normalizedLanguage);
-    
-    // Store in chat history
-    if (!chatHistory.has(sessionId)) {
-      chatHistory.set(sessionId, []);
+    console.log(`Processing AI LegalGPT request: ${query} (Language: ${language}, RT: ${isRealtimeRequest}, Key: ${apiKey ? 'Yes' : 'No'})`);
+
+    let answer = "";
+    let isFromHistory = false;
+    let fallbackUsed = false;
+
+    // SCENARIO 1: Real-time is ON and API Key exists
+    if (isRealtimeRequest && apiKey) {
+      try {
+        const genAI = getGenAI();
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+        const fullPrompt = `${getSystemPrompt(language, location)}\n\nUser Question:\n${query}`;
+
+        const result = await model.generateContent(fullPrompt);
+        const response = await result.response;
+        answer = response.text();
+        
+        // ONLY Save to Global History (Our "dataset") if it's a valid legal response
+        // Avoid saving "I am a legal AI..." refusals for non-legal questions like "what is java"
+        const isRefusal = answer.includes(LEGAL_FALLBACK_EN) || answer.includes(LEGAL_FALLBACK_TA);
+        if (!isRefusal) {
+          await GlobalHistory.save(query, answer);
+        }
+        
+      } catch (apiError) {
+        console.error('🚫 Gemini API Error (HTTP):', apiError.message);
+        const historyResult = await LocalSearch.search(query, language);
+        answer = historyResult.answer;
+        isFromHistory = historyResult.source === 'History';
+        fallbackUsed = true;
+      }
+    } else {
+        // SCENARIO 2: Real-time is OFF or API Key is missing
+        console.log('ℹ️ Local History Search Mode (RT Off or API Key missing)');
+        const historyResult = await LocalSearch.search(query, language);
+        answer = historyResult.answer;
+        isFromHistory = historyResult.source === 'History';
+        fallbackUsed = true;
     }
-    const history = chatHistory.get(sessionId);
-    history.push({ role: 'user', content: query });
-    history.push({ role: 'assistant', content: response.answer, citations: response.citations });
-    
-    if (history.length > 20) {
-      history.splice(0, history.length - 20);
+
+    // Use answer as primary response without visible prefixes
+    const finalAnswer = answer;
+
+    res.json({
+      answer: finalAnswer,
+      citations: [], 
+      section_title: isFromHistory ? "Previous Insight" : (fallbackUsed ? "Local Matching" : ""),
+      isOffline: fallbackUsed,
+      isFromHistory
+    });
+
+    // Save to history asynchronously
+    const userId = req.user.id;
+    const sessionId = req.body.sessionId || 'default';
+    const existingChat = await Chat.findSession(userId, sessionId);
+
+    const userMessage = {
+      id: `msg_${Date.now()}`,
+      role: 'user',
+      content: query,
+      timestamp: new Date().toISOString()
+    };
+
+    const aiMessage = {
+      id: `msg_${Date.now() + 1}`,
+      role: 'assistant',
+      content: answer,
+      timestamp: new Date().toISOString()
+    };
+
+    const updatedMessages = [...(existingChat?.messages || []), userMessage, aiMessage];
+
+    // Auto-generate title if it's the first message
+    let title = existingChat?.title || 'New Chat';
+    if (title === 'New Chat' || !existingChat) {
+      title = query.slice(0, 30) + (query.length > 30 ? '...' : '');
     }
-    
-    // Return structured JSON response
-    res.json(response);
+
+    await Chat.save(userId, {
+      id: sessionId,
+      title,
+      messages: updatedMessages
+    });
+
   } catch (error) {
     console.error('Chat error:', error);
-    res.status(500).json({ 
-      answer: "I could not find an exact IPC reference for your question. Please consult a legal professional.",
-      citations: [],
-      section_title: "",
-      confidence: 0
+    res.status(500).json({
+      error: "Failed to get response from AI LegalGPT",
+      details: error.message
     });
   }
 });
 
-router.get('/history/:sessionId', (req, res) => {
-  const { sessionId } = req.params;
-  const history = chatHistory.get(sessionId) || [];
-  res.json({ history });
-});
-
-router.delete('/history/:sessionId', (req, res) => {
-  const { sessionId } = req.params;
-  chatHistory.delete(sessionId);
-  res.json({ success: true });
-});
-
-/**
- * Generate user-friendly response using Gemini
- * Combines RAG context with AI generation
- * @param {string} query - User's query
- * @param {Object} retrievalResult - Retrieved documents from RAG
- * @param {string} language - Language code ('en' or 'ta')
- */
-async function generateFriendlyResponse(query, retrievalResult, language = 'en') {
-  const { documents, citations, confidence } = retrievalResult;
-  
-  const relevantDoc = documents[0];
-  
-  // If no relevant document found
-  if (!relevantDoc) {
-    const errorResponse = getErrorResponse('noReference', language);
-    return {
-      ...errorResponse,
-      answer: formatResponseAnswer(errorResponse.answer, 200)
-    };
-  }
-  
-  // Check for greetings using i18n
-  const greetingResponse = getGreetingResponse(query, language);
-  if (greetingResponse) {
-    return {
-      ...greetingResponse,
-      answer: formatResponseAnswer(greetingResponse.answer, 200)
-    };
-  }
-  
-  // Build context from retrieved documents
-  let context = "";
-  let sectionTitle = relevantDoc.title || relevantDoc.section;
-  
-  documents.forEach((doc, index) => {
-    context += `\n\nDocument ${index + 1}:\n`;
-    context += `Section: ${doc.section}\n`;
-    context += `Title: ${doc.title || 'N/A'}\n`;
-    context += `Content: ${doc.content || doc.pageContent || 'N/A'}\n`;
-  });
-  
-  // Create prompt for Gemini with language instruction
-  const languageInstruction = language === 'ta' 
-    ? `\n\nIMPORTANT: Respond in Tamil language (தமிழ்).`
-    : '';
-  
-  const userMessage = query;
-  const messages = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: userMessage }
-  ];
-
-  const prompt = `${systemPrompt}${languageInstruction}
-
-User Question: ${userMessage}
-
-Legal Context: ${context}`;
-
+// GET /api/chat/history
+router.get('/history', async (req, res) => {
   try {
-    const responseText = await generateWithGemini(prompt);
-    
-    // Try to extract JSON from response
-    try {
-      // Find JSON in the response
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        return {
-          answer: parsed.answer || responseText,
-          citations: parsed.citations || citations,
-          section_title: parsed.section_title || sectionTitle,
-          confidence: parsed.confidence || (documents.length > 0 ? 0.85 : 0)
-        };
-      }
-    } catch (parseError) {
-      console.log('JSON parse failed, using raw response');
-    }
-    
-    // Translate to Tamil if needed (post-generation)
-    let finalAnswer = responseText;
-    if (language === 'ta') {
-      try {
-        const translatePrompt = `Translate the following legal explanation to natural, fluent Tamil (தமிழ்). Keep legal terms accurate. Do not add extra content:
-
-Original: ${responseText}`;
-        finalAnswer = await generateWithGemini(translatePrompt);
-      } catch (translateError) {
-        console.warn('Translation failed, using original:', translateError.message);
-      }
-    }
-
-    // Return as structured response
-    return {
-      answer: formatResponseAnswer(finalAnswer, 200),
-      citations: citations,
-      section_title: sectionTitle,
-      confidence: documents.length > 0 ? 0.85 : 0
-    };
-    
-  } catch (geminiError) {
-    let answer = "";
-    if (relevantDoc.isStatute) {
-      answer = `${relevantDoc.section} - ${relevantDoc.title}: ${relevantDoc.content}`;
-    } else {
-      // Show more content from PDF (up to 2000 characters)
-      const content = relevantDoc.content || relevantDoc.pageContent || '';
-      answer = `Case ${relevantDoc.section || relevantDoc.metadata?.caseNumber || 'Unknown'}: ${content.substring(0, 2000)}`;
-    }
-
-    const isQuotaOrRateLimited = geminiError?.status === 429;
-
-    if (isQuotaOrRateLimited) {
-      console.warn('Gemini quota/rate limit exceeded. Using retrieval-only fallback.');
-      answer =
-        `AI enhancement is temporarily unavailable due to API quota/rate limits. ` +
-        `Showing retrieval-based result:\n\n${answer}`;
-    } else {
-      console.error('Gemini error:', geminiError);
-    }
-    
-    return {
-      answer: formatResponseAnswer(answer, 200),
-      citations: citations,
-      section_title: sectionTitle,
-      confidence: documents.length > 0 ? 0.7 : 0
-    };
+    const userId = req.user.id;
+    const chats = await Chat.findByUser(userId);
+    res.json({ history: chats });
+  } catch (error) {
+    console.error('Get history error:', error);
+    res.status(500).json({ error: 'Failed to fetch history' });
   }
-}
+});
 
-// Use v1beta API for gemini-1.5-flash model
-async function generateWithGemini(prompt) {
-  const endpoint =
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(geminiModel)}:generateContent` +
-    `?key=${encodeURIComponent(geminiApiKey)}`;
-
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [{ text: prompt }],
-        },
-      ],
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 4096,
-      },
-    }),
-  });
-
-  const payload = await response.json();
-
-  if (!response.ok) {
-    const err = new Error(payload?.error?.message || 'Gemini API request failed');
-    err.status = response.status;
-    err.code = payload?.error?.status || payload?.error?.code || null;
-    throw err;
+// GET /api/chat/history/:sessionId
+router.get('/history/:sessionId', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { sessionId } = req.params;
+    const chat = await Chat.findSession(userId, sessionId);
+    res.json({ history: chat ? chat.messages : [] });
+  } catch (error) {
+    console.error('Get session history error:', error);
+    res.status(500).json({ error: 'Failed to fetch session history' });
   }
+});
 
-  const parts = payload?.candidates?.[0]?.content?.parts || [];
-  const text = parts
-    .map((part) => part?.text || '')
-    .join('')
-    .trim();
-
-  if (!text) {
-    throw new Error('Gemini returned an empty response');
+// DELETE /api/chat/history/:sessionId
+router.get('/clear-all', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    await Chat.clear(userId);
+    res.json({ success: true, message: 'All chat history cleared' });
+  } catch (error) {
+    console.error('Clear history error:', error);
+    res.status(500).json({ error: 'Failed to clear history' });
   }
+});
 
-  return text;
-}
-
+router.delete('/history/:sessionId', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { sessionId } = req.params;
+    await Chat.delete(userId, sessionId);
+    res.json({ success: true, message: 'Chat session deleted' });
+  } catch (error) {
+    console.error('Delete session error:', error);
+    res.status(500).json({ error: 'Failed to delete session' });
+  }
+});
 /**
  * Handle WebSocket chat events
  */
 export const setupSocketHandlers = (io) => {
   io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
-    
+
     socket.on('chat:message', async (data) => {
-      const { query, sessionId, language = 'en' } = data;
-      
+      const { query, language, sessionId, token, location, realtime } = data;
+      const isRealtimeRequest = realtime !== false;
+      const apiKey = getApiKey(); // Reload fresh every time
+
+      let userId = 'anonymous';
+      if (token) {
+        try {
+          const decoded = jwt.verify(token, process.env.JWT_SECRET);
+          userId = decoded.id;
+        } catch (err) {
+          console.error('Socket token verification failed:', err);
+        }
+      }
+
       try {
         socket.emit('chat:typing', { isTyping: true });
-        
-        // Validate and normalize language (fallback to 'en' if unsupported)
-        const normalizedLanguage = isSupportedLanguage(language) ? language : 'en';
-        
-        const retrievalResult = await retrieveAndPrepareContext(query);
-        const useGemini = isComplexQuery(query);
-        let response = useGemini
-          ? await generateFriendlyResponse(query, retrievalResult, normalizedLanguage)
-          : buildRetrievalOnlyResponse(retrievalResult);
-        response = await reformatWithGemini(response, normalizedLanguage);
-        
-        // Translate to Tamil if needed (post-generation for streaming)
-        // Send complete response
+
+        let fullResponseText = "";
+        let isFromHistory = false;
+        let fallbackUsed = false;
+
+        // Try Gemini only if allowed and key exists
+        if (isRealtimeRequest && apiKey) {
+          try {
+            const genAI = getGenAI();
+            const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+            const fullPrompt = `${getSystemPrompt(language, location)}\n\nUser Question:\n${query}`;
+
+            // Use streaming for better responsiveness
+            const result = await model.generateContentStream(fullPrompt);
+
+            for await (const chunk of result.stream) {
+              const chunkText = chunk.text();
+              fullResponseText += chunkText;
+              socket.emit('chat:stream', { text: chunkText });
+            }
+            
+            // ONLY Save to Global History if it's a valid legal response
+            const isRefusal = fullResponseText.includes(LEGAL_FALLBACK_EN) || fullResponseText.includes(LEGAL_FALLBACK_TA);
+            if (!isRefusal) {
+              await GlobalHistory.save(query, fullResponseText);
+            }
+
+          } catch (apiError) {
+            console.error('🚫 Socket Gemini Error:', apiError.message);
+            const historyResult = await LocalSearch.search(query, language);
+            fullResponseText = historyResult.answer;
+            isFromHistory = historyResult.source === 'History';
+            fallbackUsed = true;
+            socket.emit('chat:stream', { text: fullResponseText });
+          }
+        } else {
+            // Forced history mode
+            const historyResult = await LocalSearch.search(query, language);
+            fullResponseText = historyResult.answer;
+            isFromHistory = historyResult.source === 'History';
+            fallbackUsed = true;
+            socket.emit('chat:stream', { text: fullResponseText });
+        }
+
+        const finalAnswer = fullResponseText;
+
         socket.emit('chat:complete', {
-          answer: response.answer,
-          citations: response.citations,
-          section_title: response.section_title,
-          confidence: response.confidence,
+          answer: finalAnswer,
+          sessionId: sessionId || 'default',
+          citations: [],
+          section_title: isFromHistory ? "Previous Insight" : (fallbackUsed ? "Local Matching" : ""),
+          isOffline: fallbackUsed,
+          isFromHistory
         });
-        
+
+        // Save to history in background
+        if (userId !== 'anonymous') {
+          const sId = sessionId || 'default';
+          const existingChat = await Chat.findSession(userId, sId);
+
+          let title = existingChat?.title || 'New Chat';
+          if (title === 'New Chat' || !existingChat) {
+            title = query.slice(0, 30) + (query.length > 30 ? '...' : '');
+          }
+
+          const userMessage = {
+            id: `msg_${Date.now()}`,
+            role: 'user',
+            content: query,
+            timestamp: new Date().toISOString()
+          };
+
+          const aiMessage = {
+            id: `msg_${Date.now() + 1}`,
+            role: 'assistant',
+            content: fullResponseText,
+            timestamp: new Date().toISOString()
+          };
+
+          const updatedMessages = [...(existingChat?.messages || []), userMessage, aiMessage];
+          await Chat.save(userId, {
+            id: sId,
+            title,
+            messages: updatedMessages
+          });
+        }
+
         socket.emit('chat:typing', { isTyping: false });
-        
+
       } catch (error) {
-        console.error('Socket chat error:', error);
-        socket.emit('chat:error', { error: 'Failed to process request' });
+        console.error('Socket streaming error detailed:', {
+          message: error.message,
+          status: error.status,
+          details: error.errorDetails
+        });
+        socket.emit('chat:error', {
+          error: `AI Error: ${error.message}`,
+          details: error.message
+        });
         socket.emit('chat:typing', { isTyping: false });
       }
     });
-    
+
     socket.on('disconnect', () => {
       console.log('Client disconnected:', socket.id);
     });

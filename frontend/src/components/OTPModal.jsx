@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiLoader, FiArrowLeft, FiCopy } from 'react-icons/fi';
+import { FiLoader, FiArrowLeft, FiCopy, FiCheck } from 'react-icons/fi';
 
 const OTPModal = ({ email, onVerify, onResend, isLoading, error, t }) => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -16,6 +16,8 @@ const OTPModal = ({ email, onVerify, onResend, isLoading, error, t }) => {
     if (resendTimer > 0) {
       const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
       return () => clearTimeout(timer);
+    } else {
+      setCanResend(true);
     }
   }, [resendTimer]);
 
@@ -40,7 +42,7 @@ const value = e.target.value.replace(/[^0-9]/g, '');
 
   const handlePaste = (e) => {
     e.preventDefault();
-const pasted = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+    const pasted = String(e.clipboardData.getData('text') || '').replace(/[^0-9]/g, '').slice(0, 6);
     const newOtp = pasted.padEnd(6, '').split('').slice(0, 6);
     setOtp(newOtp);
     if (newOtp[5]) {
@@ -50,7 +52,15 @@ const pasted = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6
 
   const handleVerify = () => {
     if (otp.join('').length === 6 && !isLoading) {
-      onVerify();
+      onVerify(otp.join(''));
+    }
+  };
+
+  const handleResendClick = async () => {
+    if (canResend && !isLoading) {
+      setCanResend(false);
+      setResendTimer(60);
+      await onResend();
     }
   };
 
@@ -62,7 +72,7 @@ const pasted = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6
       className="space-y-8"
     >
       <div className="text-center">
-        <motion.div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-2xl flex items-center justify-center mb-6 shadow-2xl">
+        <motion.div className="mx-auto w-20 h-20 bg-gradient-to-br from-accent to-teal-500 rounded-2xl flex items-center justify-center mb-6 shadow-2xl">
           <FiLoader className="w-10 h-10 text-white animate-spin" />
         </motion.div>
         <h2 className="text-2xl font-bold text-white mb-2">
@@ -111,7 +121,7 @@ const pasted = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6
           disabled={otp.join('').length !== 6 || isLoading}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="w-full h-14 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold text-lg rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full h-14 bg-gradient-to-r from-accent to-teal-600 hover:from-accent-hover hover:to-teal-700 text-white font-bold text-lg rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isLoading ? (
             <>
@@ -128,7 +138,7 @@ const pasted = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6
 
         <div className="text-center">
           <motion.button
-            onClick={onResend}
+            onClick={handleResendClick}
             disabled={!canResend || isLoading}
             whileHover={{ scale: 1.02 }}
             className="text-accent hover:text-accent/80 font-medium flex items-center gap-1 mx-auto transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -139,7 +149,7 @@ const pasted = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6
               </>
             ) : (
               <>
-                <FiArrowLeft className="w-4 h-4 -rotate-180" />
+                <FiArrowLeft className="w-4 h-4" />
                 Resend OTP
               </>
             )}

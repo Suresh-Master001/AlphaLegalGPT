@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { loginUser, signupUser, verifyOTP as verifyOTPApi } from '../services/api';
+import { loginUser, signupUser, verifyOTP as verifyOTPApi, resendOTP as resendOTPApi } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -17,26 +17,81 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Inactivity Timeout: 30 minutes
+  const INACTIVITY_TIMEOUT = 30 * 60 * 1000;
+
   useEffect(() => {
-    // Force login on every app open by clearing any persisted auth
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('token');
-    setUser(null);
-    setToken(null);
-    setIsAuthenticated(false);
+    // Check session storage to strictly persist only per-tab session
+    const storedToken = sessionStorage.getItem('authToken');
+    const storedUser = sessionStorage.getItem('user');
+
+    if (storedToken && storedUser) {
+      setToken(storedToken);
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        setUser({ email: storedUser });
+      }
+      setIsAuthenticated(true);
+    } else {
+      // Force logout if invalid, and ensure standard dark theme for Login page
+      sessionStorage.removeItem('authToken');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
+      setUser(null);
+      setToken(null);
+      setIsAuthenticated(false);
+      document.documentElement.classList.add('dark');
+    }
     setLoading(false);
   }, []);
 
+  // Inactivity Tracker
+  useEffect(() => {
+    let timeoutId;
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (isAuthenticated) {
+        timeoutId = setTimeout(() => {
+          console.log('🚪 Auto-logging out due to 30m inactivity');
+          logout();
+        }, INACTIVITY_TIMEOUT);
+      }
+    };
+
+    if (isAuthenticated) {
+      // Events to track user activity
+      const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+      
+      events.forEach(event => {
+        window.addEventListener(event, resetTimer);
+      });
+
+      // Initial timer start
+      resetTimer();
+
+      return () => {
+        if (timeoutId) clearTimeout(timeoutId);
+        events.forEach(event => {
+          window.removeEventListener(event, resetTimer);
+        });
+      };
+    }
+  }, [isAuthenticated]);
+
   const login = async (email, password) => {
     try {
-      const { token } = await loginUser(email, password);
-      localStorage.setItem('authToken', token);
+      const { token, user: userData } = await loginUser(email, password);
+      const finalUser = userData || { email };
+      sessionStorage.setItem('authToken', token);
+      sessionStorage.setItem('user', JSON.stringify(finalUser));
       setToken(token);
-      setUser({ email });
+      setUser(finalUser);
       setIsAuthenticated(true);
       return { success: true };
     } catch (error) {
-      throw new Error('Login failed');
+      throw error;
     }
   };
 
@@ -45,31 +100,47 @@ export const AuthProvider = ({ children }) => {
       const result = await signupUser(name, email, password);
       return { success: true, ...result };
     } catch (error) {
-      throw new Error('Signup failed');
+      throw error;
     }
   };
 
   const verifyOTP = async (email, otp) => {
     try {
-      const { token } = await verifyOTPApi(email, otp.join(''));
-      localStorage.setItem('authToken', token);
+      const { token, user: userData } = await verifyOTPApi(email, otp);
+      const finalUser = userData || { email };
+      sessionStorage.setItem('authToken', token);
+      sessionStorage.setItem('user', JSON.stringify(finalUser));
       setToken(token);
-      setUser({ email });
+      setUser(finalUser);
       setIsAuthenticated(true);
       return { success: true };
     } catch (error) {
-      throw new Error('OTP verification failed');
+      throw error;
     }
   };
 
+  const resendOTP = async (email) => {
+    try {
+      const result = await resendOTPApi(email);
+      return { success: true, ...result };
+    } catch (error) {
+      throw error;
+    }
+  };
+
+
   const logout = () => {
-    localStorage.removeItem('authToken');
+    sessionStorage.removeItem('authToken');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
     setUser(null);
     setToken(null);
     setIsAuthenticated(false);
+    // Force standard dark theme for unauthenticated views (Login/Signup)
+    document.documentElement.classList.add('dark');
   };
 
-  const value = {
+  const value = React.useMemo(() => ({
     user,
     token,
     isAuthenticated,
@@ -78,7 +149,8 @@ export const AuthProvider = ({ children }) => {
     signup,
     verifyOTP,
     logout,
-  };
+    resendOTP,
+  }), [user, token, isAuthenticated, loading, login, signup, verifyOTP, logout, resendOTP]);
 
   return (
     <AuthContext.Provider value={value}>

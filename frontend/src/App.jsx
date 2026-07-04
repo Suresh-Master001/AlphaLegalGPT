@@ -1,8 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
-import Home from './pages/Home';
 import MainApp from './pages/MainApp';
+import About from './pages/About';
 import Login from './components/Login';
 import Signup from './components/Signup';
 
@@ -15,18 +15,14 @@ const ProtectedRoute = ({ children }) => {
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   if (loading) return <div>Loading...</div>;
-  return !isAuthenticated ? children : <Navigate to="/" replace />;
+  return !isAuthenticated ? children : <Navigate to="/chat" replace />;
 };
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={
-          <ProtectedRoute>
-            <MainApp />
-          </ProtectedRoute>
-        } />
+        <Route path="/" element={<About onGetStarted={() => window.location.href = '/login'} />} />
         <Route path="/chat" element={
           <ProtectedRoute>
             <MainApp />
