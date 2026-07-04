@@ -4,10 +4,10 @@ import dotenv from 'dotenv';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { Chat } from '../models/Chat.js';
-import { User } from '../models/User.js';
-import { GlobalHistory } from '../models/GlobalHistory.js';
-import { LocalSearch } from '../search/LocalSearch.js';
+import { Chat } from '../data/models/Chat.js';
+import { User } from '../data/models/User.js';
+import { GlobalHistory } from '../data/models/GlobalHistory.js';
+import { LocalSearch } from '../data/search/LocalSearch.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
