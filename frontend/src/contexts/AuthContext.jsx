@@ -80,51 +80,129 @@ export const AuthProvider = ({ children }) => {
     }
   }, [isAuthenticated]);
 
+  /**
+   * Login user with email and password
+   * @param {string} email - User email
+   * @param {string} password - User password
+   * @returns {Promise<Object>} Login result
+   */
   const login = async (email, password) => {
     try {
-      const { token, user: userData } = await loginUser(email, password);
+      const response = await loginUser(email, password);
+      
+      if (!response.success || !response.token) {
+        throw new Error(response.error || 'Login failed');
+      }
+      
+      const { token, user: userData } = response;
       const finalUser = userData || { email };
+      
+      // Store in sessionStorage for tab-specific session
       sessionStorage.setItem('authToken', token);
       sessionStorage.setItem('user', JSON.stringify(finalUser));
+      
       setToken(token);
       setUser(finalUser);
       setIsAuthenticated(true);
-      return { success: true };
+      
+      return { success: true, user: finalUser };
     } catch (error) {
-      throw error;
+      // Enhance error with type for better frontend handling
+      const enhancedError = new Error(error.message || 'Login failed');
+      enhancedError.type = error.type || 'login_error';
+      throw enhancedError;
     }
   };
 
+  /**
+   * Register new user
+   * @param {string} name - User name
+   * @param {string} email - User email
+   * @param {string} password - User password
+   * @returns {Promise<Object>} Signup result
+   */
   const signup = async (name, email, password) => {
     try {
-      const result = await signupUser(name, email, password);
-      return { success: true, ...result };
+      const response = await signupUser(name, email, password);
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Signup failed');
+      }
+      
+      return {
+        success: true,
+        message: response.message,
+        email: response.email,
+        requiresVerification: response.requiresVerification
+      };
     } catch (error) {
-      throw error;
+      const enhancedError = new Error(error.message || 'Signup failed');
+      enhancedError.type = error.type || 'signup_error';
+      throw enhancedError;
     }
   };
 
+  /**
+   * Verify OTP and activate account
+   * @param {string} email - User email
+   * @param {string} otp - 6-digit OTP
+   * @returns {Promise<Object>} Verification result
+   */
   const verifyOTP = async (email, otp) => {
     try {
-      const { token, user: userData } = await verifyOTPApi(email, otp);
+      const response = await verifyOTPApi(email, otp);
+      
+      if (!response.success || !response.token) {
+        throw new Error(response.error || 'OTP verification failed');
+      }
+      
+      const { token, user: userData } = response;
       const finalUser = userData || { email };
+      
+      // Store in sessionStorage
       sessionStorage.setItem('authToken', token);
       sessionStorage.setItem('user', JSON.stringify(finalUser));
+      
       setToken(token);
       setUser(finalUser);
       setIsAuthenticated(true);
-      return { success: true };
+      
+      return { 
+        success: true, 
+        message: response.message,
+        user: finalUser 
+      };
     } catch (error) {
-      throw error;
+      const enhancedError = new Error(error.message || 'OTP verification failed');
+      enhancedError.type = error.type || 'otp_error';
+      enhancedError.canResend = error.canResend || false;
+      throw enhancedError;
     }
   };
 
+  /**
+   * Resend OTP to email
+   * @param {string} email - User email
+   * @returns {Promise<Object>} Resend result
+   */
   const resendOTP = async (email) => {
     try {
-      const result = await resendOTPApi(email);
-      return { success: true, ...result };
+      const response = await resendOTPApi(email);
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to resend OTP');
+      }
+      
+      return {
+        success: true,
+        message: response.message,
+        email: response.email
+      };
     } catch (error) {
-      throw error;
+      const enhancedError = new Error(error.message || 'Failed to resend OTP');
+      enhancedError.type = error.type || 'resend_error';
+      enhancedError.remainingTime = error.remainingTime || 0;
+      throw enhancedError;
     }
   };
 

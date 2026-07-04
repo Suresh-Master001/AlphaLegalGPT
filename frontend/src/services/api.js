@@ -191,116 +191,116 @@ export const clearChatHistory = async (sessionId) => {
 /**
  * Auth API methods
  */
+/**
+ * Handle API response with standard format
+ * @param {Response} response - Fetch response object
+ * @returns {Promise<Object>} Parsed response data
+ * @throws {Error} Throws error with message and optional type
+ */
+const handleApiResponse = async (response) => {
+  const data = await response.json();
+  
+  if (!response.ok) {
+    const errorMessage = data.error || 'An error occurred';
+    const error = new Error(errorMessage);
+    error.type = data.type || 'unknown_error';
+    error.statusCode = response.status;
+    error.response = data;
+    throw error;
+  }
+  
+  return data;
+};
+
+/**
+ * Login user
+ * @route POST /api/auth/login
+ */
 export const loginUser = async (email, password) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ email, password }),
-    });
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || 'Login failed');
-    }
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Login error:', error);
-    throw error;
-  }
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ email, password }),
+    // Add timeout for better UX
+    signal: AbortSignal.timeout(15000)
+  });
+  
+  return handleApiResponse(response);
 };
 
+/**
+ * Signup new user
+ * @route POST /api/auth/signup
+ */
 export const signupUser = async (name, email, password) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/signup`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ name, email, password }),
-    });
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || 'Signup failed');
-    }
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Signup error:', error);
-    throw error;
-  }
+  const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ name, email, password }),
+    signal: AbortSignal.timeout(15000)
+  });
+  
+  return handleApiResponse(response);
 };
 
+/**
+ * Verify OTP
+ * @route POST /api/auth/verify-otp
+ */
 export const verifyOTP = async (email, otp) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ email, otp }),
-    });
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || 'OTP verification failed');
-    }
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('OTP verification error:', error);
-    throw error;
-  }
+  const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ email, otp }),
+    signal: AbortSignal.timeout(15000)
+  });
+  
+  return handleApiResponse(response);
 };
 
+/**
+ * Resend OTP
+ * @route POST /api/auth/resend-otp
+ */
 export const resendOTP = async (email) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/resend-otp`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ email }),
-    });
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || 'Failed to resend OTP');
-    }
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Resend OTP error:', error);
-    throw error;
-  }
+  const response = await fetch(`${API_BASE_URL}/auth/resend-otp`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ email }),
+    signal: AbortSignal.timeout(15000)
+  });
+  
+  return handleApiResponse(response);
 };
 
+/**
+ * Request password reset
+ * @route POST /api/auth/forgot-password
+ */
 export const forgotPassword = async (email) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ email }),
-    });
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || 'Failed to request password reset');
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('Forgot Password error:', error);
-    throw error;
-  }
+  const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ email }),
+    signal: AbortSignal.timeout(15000)
+  });
+  
+  return handleApiResponse(response);
 };
 
+/**
+ * Reset password with OTP
+ * @route POST /api/auth/reset-password
+ */
 export const resetPassword = async (email, otp, newPassword) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ email, otp, newPassword }),
-    });
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || 'Failed to reset password');
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('Reset Password error:', error);
-    throw error;
-  }
+  const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ email, otp, newPassword }),
+    signal: AbortSignal.timeout(15000)
+  });
+  
+  return handleApiResponse(response);
 };
 
 /**
@@ -319,7 +319,14 @@ export const checkHealth = async () => {
 /**
  * Upload Document
  */
-export const uploadDocument = async (file) => {
+/**
+ * Upload document for parsing
+ * @route POST /api/upload
+ * @param {File} file - File object to upload
+ * @param {Function} onProgress - Optional progress callback
+ * @returns {Promise<Object>} Upload result with extracted text
+ */
+export const uploadDocument = async (file, onProgress = null) => {
   try {
     const formData = new FormData();
     formData.append('document', file);
@@ -334,14 +341,14 @@ export const uploadDocument = async (file) => {
       method: 'POST',
       headers,
       body: formData,
+      signal: AbortSignal.timeout(30000) // 30 second timeout for large files
     });
     
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || 'Document upload failed');
-    }
-    return await response.json();
+    return handleApiResponse(response);
   } catch (error) {
+    if (error.name === 'TimeoutError') {
+      throw new Error('Upload timed out. Please try again with a smaller file.');
+    }
     console.error('Upload document error:', error);
     throw error;
   }

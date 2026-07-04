@@ -15,9 +15,19 @@ dotenv.config({ path: join(__dirname, '../../.env') });
 
 const router = express.Router();
 
+// Cache API key to avoid reloading .env on every request
+let cachedApiKey = null;
+let lastCacheTime = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 const getApiKey = () => {
-  dotenv.config({ path: join(__dirname, '../../.env'), override: true });
-  return process.env.GEMINI_API_KEY?.trim();
+  const now = Date.now();
+  if (!cachedApiKey || (now - lastCacheTime) > CACHE_DURATION) {
+    dotenv.config({ path: join(__dirname, '../../.env'), override: true });
+    cachedApiKey = process.env.GEMINI_API_KEY?.trim();
+    lastCacheTime = now;
+  }
+  return cachedApiKey;
 };
 
 const getGenAI = () => {
