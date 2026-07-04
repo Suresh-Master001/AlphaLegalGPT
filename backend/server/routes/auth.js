@@ -213,7 +213,7 @@ router.post('/resend-otp', async (req, res) => {
 
     const otp = generateOTP();
     const expiry = Date.now() + 10 * 60 * 1000;
-    await User.findOneAndUpdate(email, {
+    await User.findOneAndUpdate({ email }, {
       otp,
       otpExpiry: expiry
     });
