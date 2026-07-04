@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { GlobalHistory } from '../data/models/GlobalHistory.js';
+import { GlobalHistory } from '../models/GlobalHistory.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
