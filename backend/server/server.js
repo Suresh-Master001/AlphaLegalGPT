@@ -112,28 +112,11 @@ app.use((err, req, res, next) => {
 const initializeApp = async () => {
   try {
     console.log('Starting AI LegalGPT Backend (Gemini)...');
-    console.log('Using local file storage for users.');
+    console.log('Database: SQLite with Prisma ORM');
 
-    // Seed default admin user if not exists
-    try {
-      const defaultEmail = 'admin@alphalegal.com';
-      const existingAdmin = await User.findByEmail(defaultEmail);
-      if (!existingAdmin) {
-        await User.create({
-          name: 'Admin User',
-          email: defaultEmail,
-          password: 'password123'
-        });
-        // Set verified immediately for admin
-        await User.findOneAndUpdate({ email: defaultEmail }, { isVerified: true });
-        console.log('✅ Default user created: admin@alphalegal.com / password123');
-      } else {
-        console.log('✅ Default user already exists');
-      }
-    } catch (error) {
-      console.error('Default user seeding error:', error);
-    }
-    
+    // Seed default admin user if not exists via Prisma migration seed
+    console.log('✅ Prisma seed will handle default user creation on deployment');
+
     // Start server
     const PORT = process.env.PORT || 3001;
     httpServer.listen(PORT, () => {
@@ -146,7 +129,7 @@ const initializeApp = async () => {
   ║  Frontend: ${process.env.FRONTEND_URL}                ║
   ║  LLM:     Gemini                                  ║
   ║  WebSocket: Enabled                               ║
-  ║  Database: Local JSON (Temporary)                 ║
+  ║  Database: SQLite (Prisma)                 ║
   ╚═══════════════════════════════════════════════════╝
       `);
     });
