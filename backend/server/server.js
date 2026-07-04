@@ -132,7 +132,19 @@ const initializeApp = async () => {
         throw new Error('MONGODB_URI is not configured correctly for production');
       }
     } else {
-      await mongoose.connect(mongoUri);
+      try {
+        await mongoose.connect(mongoUri);
+      } catch (error) {
+        if (error.name === 'MongooseServerSelectionError' || error.code === 'ENOTFOUND') {
+          console.error('❌ MongoDB Connection Failed:');
+          console.error('   - Check if MongoDB Atlas IP whitelist includes Render.com IPs');
+          console.error('   - Verify MONGODB_URI is correct in environment variables');
+          console.error('   - Ensure database user has correct permissions');
+          console.error('   - MongoDB Atlas: https://cloud.mongodb.com/');
+          throw new Error(`MongoDB connection failed: ${error.message}`);
+        }
+        throw error;
+      }
     }
     console.log('✅ Connected to MongoDB');
 
