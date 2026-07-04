@@ -4,9 +4,10 @@ import jwt from 'jsonwebtoken';
 import Joi from 'joi';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { User } from '../models/User.js';
+import { User } from '../data/models/User.js';
 import nodemailer from 'nodemailer';
 
 const router = express.Router();
@@ -21,7 +22,7 @@ if (!JWT_SECRET) {
 }
 
 const generateOTP = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return crypto.randomInt(100000, 999999).toString();
 };
 
 const transporter = nodemailer.createTransport({
@@ -93,6 +94,10 @@ router.post('/login', async (req, res) => {
     const user = await User.findOne({ email });
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({ error: 'Please verify your email before logging in' });
     }
 
     const token = user.generateToken();
