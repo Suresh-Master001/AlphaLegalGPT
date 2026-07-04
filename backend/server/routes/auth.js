@@ -47,9 +47,9 @@ const sendOTP = async (email, otp, context = 'signup') => {
 
     let info = await transporter.sendMail({
       from: `"AlphaLegalGPT Assistant" <${process.env.EMAIL_USER}>`,
-      to: email, // list of receivers
-      subject: subject, // Subject line
-      text: `${textContext} ${otp}\n\nThis OTP is valid for 10 minutes. Please do not share this code with anyone.`, // plain text body
+      to: email,
+      subject: subject,
+      text: `${textContext} ${otp}\n\nThis OTP is valid for 10 minutes. Please do not share this code with anyone.`,
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
           <h2 style="color: #2563eb;">AlphaLegalGPT Verification</h2>
@@ -62,7 +62,7 @@ const sendOTP = async (email, otp, context = 'signup') => {
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;"/>
           <p style="font-size: 12px; color: #6b7280;">If you did not request this code, you can safely ignore this email.</p>
         </div>
-      `, // html body
+      `,
     });
     console.log(`✅ Email sent successfully: ${info.messageId}`);
     return true;
@@ -89,12 +89,12 @@ router.post('/login', async (req, res) => {
     const { email, password } = value;
     console.log('🔐 Login attempt for:', email);
 
-    const user = await User.findByEmail(email);
-    if (!user || !(await User.comparePassword(password, user.password))) {
+    const user = await User.findOne({ email });
+    if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = User.generateToken(user);
+    const token = user.generateToken();
     res.json({ 
       token, 
       user: { 
@@ -126,12 +126,20 @@ router.post('/signup', async (req, res) => {
   try {
     const { name, email, password } = value;
 
-    const user = await User.create({ name, email, password });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword
+    });
 
     // Send OTP
     const otp = generateOTP();
     const expiry = Date.now() + 10 * 60 * 1000; // 10 min
-    await User.updateOTP(email, otp, expiry);
+    await User.findByIdAndUpdate(user._id, {
+      otp,
+      otpExpiry: expiry
+    });
     
     try {
       await sendOTP(email, otp);
@@ -162,14 +170,18 @@ router.post('/verify-otp', async (req, res) => {
   try {
     const { email, otp } = value;
 
-    const success = User.verifyOTP(email, otp);
-    if (!success) {
+    const user = await User.findOne({ email });
+    if (!user || user.otp !== otp || Date.now() > user.otpExpiry) {
       return res.status(400).json({ error: 'Invalid or expired OTP' });
     }
 
-    const user = await User.findByEmail(email);
-    const token = User.generateToken(user);
+    await User.findByIdAndUpdate(user._id, {
+      isVerified: true,
+      otp: undefined,
+      otpExpiry: undefined
+    });
 
+    const token = user.generateToken();
     res.json({ 
       token, 
       user: { 
@@ -201,7 +213,10 @@ router.post('/resend-otp', async (req, res) => {
 
     const otp = generateOTP();
     const expiry = Date.now() + 10 * 60 * 1000;
-    await User.updateOTP(email, otp, expiry);
+    await User.findOneAndUpdate(email, {
+      otp,
+      otpExpiry: expiry
+    });
     await sendOTP(email, otp);
 
     res.json({ message: 'OTP resent successfully to your email!' });
@@ -231,7 +246,7 @@ router.post('/forgot-password', async (req, res) => {
 
   try {
     const { email } = value;
-    const user = await User.findByEmail(email);
+    const user = await User.findOne({ email });
 
     if (!user) {
       // Return success even if user doesn't exist to prevent email enumeration
@@ -240,7 +255,10 @@ router.post('/forgot-password', async (req, res) => {
 
     const otp = generateOTP();
     const expiry = Date.now() + 10 * 60 * 1000;
-    await User.updateOTP(email, otp, expiry);
+    await User.findByIdAndUpdate(user._id, {
+      otp,
+      otpExpiry: expiry
+    });
     
     await sendOTP(email, otp, 'reset');
     res.json({ message: 'OTP sent successfully for password reset.' });
@@ -260,11 +278,18 @@ router.post('/reset-password', async (req, res) => {
   try {
     const { email, otp, newPassword } = value;
 
-    // Atomically Verify OTP and Update Password
-    const result = await User.resetPasswordWithOTP(email, otp, newPassword);
-    if (!result.success) {
-      return res.status(400).json({ error: result.error });
+    const user = await User.findOne({ email });
+    if (!user || user.otp !== otp || Date.now() > user.otpExpiry) {
+      return res.status(400).json({ error: 'Invalid or expired OTP' });
     }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await User.findByIdAndUpdate(user._id, {
+      password: hashedPassword,
+      isVerified: true,
+      otp: undefined,
+      otpExpiry: undefined
+    });
 
     res.json({ message: 'Password has been successfully reset!' });
   } catch (error) {
@@ -274,4 +299,3 @@ router.post('/reset-password', async (req, res) => {
 });
 
 export default router;
-

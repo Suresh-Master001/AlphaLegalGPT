@@ -8,6 +8,7 @@ import morgan from 'morgan';
 import compression from 'compression';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import chatRoutes, { setupSocketHandlers } from './routes/chat.js';
@@ -111,11 +112,30 @@ app.use((err, req, res, next) => {
 // Initialize application
 const initializeApp = async () => {
   try {
-    console.log('Starting AI LegalGPT Backend (Gemini)...');
-    console.log('Database: SQLite with Prisma ORM');
+    // Connect to MongoDB
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/alphalegalgpt';
+    await mongoose.connect(mongoUri);
+    console.log('✅ Connected to MongoDB');
 
-    // Seed default admin user if not exists via Prisma migration seed
-    console.log('✅ Prisma seed will handle default user creation on deployment');
+    // Seed default admin user if not exists
+    const defaultEmail = 'admin@alphalegal.com';
+    const existingAdmin = await User.findOne({ email: defaultEmail });
+    if (!existingAdmin) {
+      const bcrypt = (await import('bcryptjs')).default;
+      const hashedPassword = await bcrypt.hash('password123', 10);
+      await User.create({
+        email: defaultEmail,
+        name: 'Admin User',
+        password: hashedPassword,
+        isVerified: true
+      });
+      console.log('✅ Default admin user created: admin@alphalegal.com / password123');
+    } else {
+      console.log('✅ Default user already exists');
+    }
+
+    console.log('Starting AI LegalGPT Backend (Gemini)...');
+    console.log('Database: MongoDB');
 
     // Start server
     const PORT = process.env.PORT || 3001;
@@ -129,7 +149,7 @@ const initializeApp = async () => {
   ║  Frontend: ${process.env.FRONTEND_URL}                ║
   ║  LLM:     Gemini                                  ║
   ║  WebSocket: Enabled                               ║
-  ║  Database: SQLite (Prisma)                 ║
+  ║  Database: MongoDB                 ║
   ╚═══════════════════════════════════════════════════╝
       `);
     });

@@ -1,43 +1,18 @@
-import { PrismaClient } from '@prisma/client';
+import mongoose from 'mongoose';
 
-const prisma = new PrismaClient();
+const globalHistorySchema = new mongoose.Schema({
+  query: {
+    type: String,
+    required: true
+  },
+  response: {
+    type: String,
+    required: true
+  }
+}, {
+  timestamps: true
+});
 
-export class GlobalHistory {
-    /**
-     * Save a unique Question-Answer pair to global history
-     */
-    static async save(question, answer) {
-        const normalizedQ = question.toLowerCase().replace(/[^\w\s]|_/g, "").replace(/\s+/g, " ").trim();
+export const GlobalHistory = mongoose.model('GlobalHistory', globalHistorySchema);
 
-        // Check if a similar question already exists
-        const existing = await prisma.globalHistory.findFirst({
-            where: {
-                query: {
-                    equals: question,
-                    mode: 'insensitive'
-                }
-            }
-        });
-        
-        if (!existing) {
-            return prisma.globalHistory.create({
-                data: {
-                    query: question,
-                    response: answer
-                }
-            });
-        }
-        return existing;
-    }
-
-    /**
-     * Return all global history items
-     */
-    static async getAll() {
-        return prisma.globalHistory.findMany({
-            orderBy: { createdAt: 'desc' }
-        });
-    }
-}
-
-export default prisma;
+export default GlobalHistory;
