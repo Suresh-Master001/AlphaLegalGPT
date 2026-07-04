@@ -1,6 +1,11 @@
 import { io } from 'socket.io-client';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = (() => {
+  const raw = import.meta.env.VITE_API_URL;
+  const trimmed = raw.replace(/\/$/, '');
+  if (!trimmed) return '/api';
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+})();
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
 
 const getStoredToken = () => {
