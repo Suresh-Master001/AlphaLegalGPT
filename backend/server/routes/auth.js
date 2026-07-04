@@ -126,6 +126,15 @@ router.post('/signup', async (req, res) => {
   try {
     const { name, email, password } = value;
 
+    // Check if MongoDB is connected
+    if (mongoose.connection.readyState !== 1) {
+      console.error('❌ MongoDB not connected during signup. ReadyState:', mongoose.connection.readyState);
+      return res.status(503).json({ 
+        error: 'Database connection unavailable. Please try again later.',
+        details: 'Service temporarily unavailable'
+      });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({
       name,
@@ -144,12 +153,19 @@ router.post('/signup', async (req, res) => {
     try {
       await sendOTP(email, otp);
     } catch (sendError) {
+      console.error('OTP send error:', sendError);
       return res.status(400).json({ error: sendError.message || 'Failed to send OTP email' });
     }
 
     res.json({ message: 'OTP sent successfully to your email!', email });
   } catch (error) {
     console.error('Signup error:', error);
+    
+    // Provide more specific error messages
+    if (error.code === 11000) {
+      return res.status(400).json({ error: 'Email already registered. Please use a different email or login.' });
+    }
+    
     res.status(400).json({ error: error.message || 'Signup failed' });
   }
 });
