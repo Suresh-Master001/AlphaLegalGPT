@@ -33,7 +33,7 @@ const chatSchema = new mongoose.Schema({
 chatSchema.index({ userId: 1, sessionId: 1 }, { unique: true });
 
 // Static method to save or update a chat session
-chatSchema.statics.save = async function(userId, chatData) {
+chatSchema.statics.saveOrUpdate = async function(userId, chatData) {
   const { id: sessionId, title, messages } = chatData;
   
   const chat = await this.findOneAndUpdate(

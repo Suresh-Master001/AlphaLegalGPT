@@ -182,7 +182,7 @@ router.post('/', async (req, res) => {
       title = query.slice(0, 30) + (query.length > 30 ? '...' : '');
     }
 
-    await Chat.save(userId, {
+    await Chat.saveOrUpdate(userId, {
       id: sessionId,
       title,
       messages: updatedMessages
@@ -349,7 +349,7 @@ export const setupSocketHandlers = (io) => {
           };
 
           const updatedMessages = [...(existingChat?.messages || []), userMessage, aiMessage];
-          await Chat.save(userId, {
+    await Chat.saveOrUpdate(userId, {
             id: sId,
             title,
             messages: updatedMessages

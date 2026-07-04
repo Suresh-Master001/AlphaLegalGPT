@@ -128,13 +128,13 @@ export const sendChatMessageStream = (query, sessionId = 'default', callbacks = 
     };
 
     const cleanup = () => {
-      socket.off('chat:streaming', handleStreaming);
+      socket.off('chat:stream', handleStreaming);
       socket.off('chat:complete', handleComplete);
       socket.off('chat:error', handleError);
       socket.off('chat:typing', handleTyping);
     };
 
-    socket.on('chat:streaming', handleStreaming);
+    socket.on('chat:stream', handleStreaming);
     socket.on('chat:complete', handleComplete);
     socket.on('chat:error', handleError);
     socket.on('chat:typing', handleTyping);

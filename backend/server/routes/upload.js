@@ -7,7 +7,7 @@ const router = express.Router();
 
 // Define multer storage for temporarily saving files to 'server/tmp'
 const upload = multer({ 
-  dest: 'server/tmp/',
+  dest: './tmp/',
   limits: { fileSize: 10 * 1024 * 1024 } // 10 MB maximum file size
 });
 
