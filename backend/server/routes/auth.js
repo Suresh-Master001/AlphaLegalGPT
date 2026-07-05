@@ -8,6 +8,7 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { User } from '../data/models/User.js';
+import dns from "node:dns";
 import nodemailer from 'nodemailer';
 
 const router = express.Router();
@@ -26,21 +27,23 @@ const generateOTP = () => {
 };
 
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.EMAIL_PORT || '465'),
-  secure: true, // true for 465 (SSL), false for 587 (TLS)
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  // Connection timeouts
-  connectionTimeout: 15_000, // 15s
-  greetingTimeout: 15_000, // 15s
-  socketTimeout: 15_000, // 15s
-  // Force IPv4 to avoid ENETUNREACH on Render
-  family: 4,
-});
 
+  connectionTimeout: 15000,
+  greetingTimeout: 15000,
+  socketTimeout: 15000,
+
+  dnsLookup: (hostname, options, callback) => {
+    dns.lookup(hostname, { family: 4 }, callback);
+  },
+});
 
 const sendOTP = async (email, otp, context = 'signup') => {
   console.log(`📧 Attempting to send OTP ${otp} to ${email}`);
