@@ -25,23 +25,45 @@ const generateOTP = () => {
   return crypto.randomInt(100000, 999999).toString();
 };
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  connectionTimeout: 15000,
-  greetingTimeout: 15000,
-  socketTimeout: 15000,
-  // Force IPv4 to prevent ENETUNREACH on Render
-  family: 4,
-  tls: {
-    rejectUnauthorized: false
+// Try Brevo SMTP first (works on Render), fallback to Gmail
+const getTransporter = () => {
+  // Brevo SMTP (recommended for cloud hosting)
+  if (process.env.BREVO_SMTP_KEY) {
+    return nodemailer.createTransport({
+      host: 'smtp.brevo.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.EMAIL_USER || 'smtp.brevo.com',
+        pass: process.env.BREVO_SMTP_KEY,
+      },
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 15000,
+      family: 4,
+    });
   }
-});
+  
+  // Gmail SMTP with IPv4 forced
+  return nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 15000,
+    family: 4,
+    tls: {
+      rejectUnauthorized: false
+    }
+  });
+};
+
+const transporter = getTransporter();
 
 const sendOTP = async (email, otp, context = 'signup') => {
   console.log(`📧 Attempting to send OTP ${otp} to ${email}`);
