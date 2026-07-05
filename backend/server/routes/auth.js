@@ -8,8 +8,6 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { User } from '../data/models/User.js';
-import dns from "node:dns";
-import nodemailer from 'nodemailer';
 
 const router = express.Router();
 
@@ -26,25 +24,9 @@ const generateOTP = () => {
   return crypto.randomInt(100000, 999999).toString();
 };
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-
-  connectionTimeout: 15000,
-  greetingTimeout: 15000,
-  socketTimeout: 15000,
-
-  dnsLookup: (hostname, options, callback) => {
-    dns.lookup(hostname, { family: 4 }, callback);
-  },
-});
-
+/**
+ * Send OTP via email using Resend API (works on Render) or SMTP fallback
+ */
 const sendOTP = async (email, otp, context = 'signup') => {
   console.log(`📧 Attempting to send OTP ${otp} to ${email}`);
   
@@ -57,11 +39,64 @@ const sendOTP = async (email, otp, context = 'signup') => {
     ? "Your OTP to reset your AlphaLegalGPT password is:" 
     : "Your OTP for AlphaLegalGPT signup is:";
 
-  // Fallback for development/testing: log OTP to console
+  // Option 1: Use Resend API (HTTPS - works reliably on Render)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const response = await fetch('https://api.resend.com/v1/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
+        },
+        body: JSON.stringify({
+          from: 'AlphaLegalGPT <onboarding@resend.dev>',
+          to: email,
+          subject: subject,
+          html: `<div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+            <h2 style="color: #2563eb;">AlphaLegalGPT Verification</h2>
+            <p>${isReset ? 'You requested a password reset.' : 'Thank you for signing up!'}</p>
+            <p>Your one-time password (OTP) is:</p>
+            <div style="background-color: #f3f4f6; padding: 10px 20px; font-size: 24px; font-weight: bold; letter-spacing: 5px; display: inline-block; border-radius: 5px; margin: 10px 0;">
+              ${otp}
+            </div>
+            <p>This code is valid for 10 minutes. Please do not share it with anyone.</p>
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;"/>
+            <p style="font-size: 12px; color: #6b7280;">If you did not request this code, you can safely ignore this email.</p>
+          </div>`
+        })
+      });
+      
+      if (response.ok) {
+        console.log(`✅ Email sent via Resend to ${email}`);
+        return true;
+      }
+      console.error('Resend API error:', await response.text());
+    } catch (error) {
+      console.error('Resend failed, falling back:', error.message);
+    }
+  }
+
+  // Option 2: Fallback to SMTP (nodemailer)
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     console.log(`⚠️ EMAIL not configured. OTP for ${email}: ${otp}`);
     return true;
   }
+
+  // Dynamic import for nodemailer to avoid blocking
+  const nodemailer = (await import('nodemailer')).default;
+  
+  const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.EMAIL_PORT || '587'),
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
+  });
 
   try {
     let info = await transporter.sendMail({
@@ -69,25 +104,22 @@ const sendOTP = async (email, otp, context = 'signup') => {
       to: email,
       subject: subject,
       text: `${textContext} ${otp}\n\nThis OTP is valid for 10 minutes. Please do not share this code with anyone.`,
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-          <h2 style="color: #2563eb;">AlphaLegalGPT Verification</h2>
-          <p>${isReset ? 'You requested a password reset.' : 'Thank you for signing up!'}</p>
-          <p>Your one-time password (OTP) is:</p>
-          <div style="background-color: #f3f4f6; padding: 10px 20px; font-size: 24px; font-weight: bold; letter-spacing: 5px; display: inline-block; border-radius: 5px; margin: 10px 0;">
-            ${otp}
-          </div>
-          <p>This code is valid for 10 minutes. Please do not share it with anyone.</p>
-          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;"/>
-          <p style="font-size: 12px; color: #6b7280;">If you did not request this code, you can safely ignore this email.</p>
+      html: `<div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+        <h2 style="color: #2563eb;">AlphaLegalGPT Verification</h2>
+        <p>${isReset ? 'You requested a password reset.' : 'Thank you for signing up!'}</p>
+        <p>Your one-time password (OTP) is:</p>
+        <div style="background-color: #f3f4f6; padding: 10px 20px; font-size: 24px; font-weight: bold; letter-spacing: 5px; display: inline-block; border-radius: 5px; margin: 10px 0;">
+          ${otp}
         </div>
-      `,
+        <p>This code is valid for 10 minutes. Please do not share it with anyone.</p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;"/>
+        <p style="font-size: 12px; color: #6b7280;">If you did not request this code, you can safely ignore this email.</p>
+      </div>`
     });
     console.log(`✅ Email sent successfully: ${info.messageId}`);
     return true;
   } catch (error) {
-    console.error("❌ Error sending email:", error.message);
-    // Don't throw - let the non-blocking caller handle gracefully
+    console.error("❌ SMTP Error sending email:", error.message);
     throw error;
   }
 };
@@ -103,7 +135,6 @@ const loginSchema = Joi.object({
  * @route POST /api/auth/login
  */
 router.post('/login', async (req, res) => {
-  // Validate request body
   const { error, value } = loginSchema.validate(req.body);
   if (error) {
     return res.status(400).json({ 
@@ -115,9 +146,6 @@ router.post('/login', async (req, res) => {
   const { email, password } = value;
 
   try {
-    console.log('🔐 Login attempt for:', email);
-
-    // Find user by email
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
       return res.status(401).json({ 
@@ -126,7 +154,6 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Verify password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       return res.status(401).json({ 
@@ -135,7 +162,6 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Check if email is verified
     if (!user.isVerified) {
       return res.status(403).json({ 
         error: 'Please verify your email before logging in',
@@ -144,18 +170,11 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Generate JWT token
     const token = user.generateToken();
-
-    // Return success response
     res.json({ 
       success: true,
       token, 
-      user: { 
-        id: user._id, 
-        name: user.name, 
-        email: user.email 
-      } 
+      user: { id: user._id, name: user.name, email: user.email } 
     });
 
   } catch (error) {
@@ -180,7 +199,6 @@ const signupSchema = Joi.object({
  * @route POST /api/auth/signup
  */
 router.post('/signup', async (req, res) => {
-  // Validate request body
   const { error, value } = signupSchema.validate(req.body);
   if (error) {
     return res.status(400).json({ 
@@ -192,20 +210,16 @@ router.post('/signup', async (req, res) => {
   const { name, email, password } = value;
 
   try {
-    // Check database connection
     if (mongoose.connection.readyState !== 1) {
-      console.error('❌ MongoDB not connected during signup. ReadyState:', mongoose.connection.readyState);
+      console.error('MongoDB not connected. ReadyState:', mongoose.connection.readyState);
       return res.status(503).json({ 
         success: false,
-        error: 'Database connection unavailable. Please try again later.',
+        error: 'Database unavailable',
         type: 'service_unavailable'
       });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create user
     const user = await User.create({
       name: name.trim(),
       email: email.toLowerCase().trim(),
@@ -213,58 +227,37 @@ router.post('/signup', async (req, res) => {
       isVerified: false
     });
 
-    // Generate and save OTP
     const otp = generateOTP();
-    const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes validity
+    const expiry = Date.now() + 10 * 60 * 1000;
     
-    await User.findByIdAndUpdate(user._id, {
-      otp,
-      otpExpiry: expiry
-    }, { new: true });
+    await User.findByIdAndUpdate(user._id, { otp, otpExpiry: expiry });
 
-    // Send OTP email (non-blocking)
-    // If SMTP/email is slow, frontend should not fail with Abort timeout.
-    // OTP is already stored in Mongo before this.
+    // Non-blocking email send
     (async () => {
       try {
         await sendOTP(email, otp, 'signup');
-        console.log(`✅ Signup OTP email queued/sent for ${email}`);
+        console.log(`✅ OTP sent to ${email}`);
       } catch (sendError) {
-        console.error('OTP send error (non-blocking):', sendError);
+        console.error('OTP send failed:', sendError);
       }
     })();
 
     res.json({ 
       success: true,
-      message: 'Account created. If email is delayed, request a new OTP.',
+      message: 'Account created. Check email for OTP.',
       email: email,
-      requiresVerification: true,
-      emailDelivery: 'pending'
+      requiresVerification: true
     });
 
-
   } catch (error) {
-    console.error('Signup error:', error);
-    
-    // Handle duplicate email error
     if (error.code === 11000) {
       return res.status(400).json({ 
         success: false,
-        error: 'Email already registered. Please use a different email or login.',
+        error: 'Email already registered',
         type: 'duplicate_error'
       });
     }
-    
-    // Handle validation errors
-    if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map(err => err.message);
-      return res.status(400).json({ 
-        success: false,
-        error: messages.join(', '),
-        type: 'validation_error'
-      });
-    }
-    
+    console.error('Signup error:', error);
     res.status(400).json({ 
       success: false,
       error: error.message || 'Signup failed',
@@ -279,198 +272,85 @@ const otpSchema = Joi.object({
   otp: Joi.string().length(6).required()
 });
 
-/**
- * Verify OTP and activate user account
- * @route POST /api/auth/verify-otp
- */
 router.post('/verify-otp', async (req, res) => {
-  // Validate request body
   const { error, value } = otpSchema.validate(req.body);
   if (error) {
-    return res.status(400).json({ 
-      error: error.details[0].message,
-      type: 'validation_error'
-    });
+    return res.status(400).json({ error: error.details[0].message, type: 'validation_error' });
   }
 
   const { email, otp } = value;
 
   try {
-    // Find user
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ 
-        error: 'User not found',
-        type: 'not_found'
-      });
+      return res.status(404).json({ error: 'User not found', type: 'not_found' });
     }
 
-    // Check if already verified
     if (user.isVerified) {
-      return res.status(400).json({ 
-        error: 'Account already verified. Please login.',
-        type: 'already_verified'
-      });
+      return res.status(400).json({ error: 'Account already verified', type: 'already_verified' });
     }
 
-    // Validate OTP
     if (!user.otp || user.otp !== otp) {
-      return res.status(400).json({ 
-        error: 'Invalid OTP code',
-        type: 'invalid_otp'
-      });
+      return res.status(400).json({ error: 'Invalid OTP code', type: 'invalid_otp' });
     }
 
-    // Check OTP expiry
     if (Date.now() > user.otpExpiry) {
-      return res.status(400).json({ 
-        error: 'OTP has expired. Please request a new one.',
-        type: 'otp_expired',
-        canResend: true
-      });
+      return res.status(400).json({ error: 'OTP expired', type: 'otp_expired', canResend: true });
     }
 
-    // Verify user and clear OTP
     await User.findByIdAndUpdate(user._id, {
       isVerified: true,
       otp: undefined,
       otpExpiry: undefined
     });
 
-    // Generate JWT token
     const token = user.generateToken();
-
-    console.log(`✅ Email verified for ${email}`);
-
-    res.json({ 
-      success: true,
-      message: 'Email verified successfully!',
-      token, 
-      user: { 
-        id: user._id, 
-        name: user.name, 
-        email: user.email 
-      } 
-    });
+    res.json({ success: true, message: 'Verified!', token, user: { id: user._id, name: user.name, email: user.email } });
 
   } catch (error) {
-    console.error('OTP verify error:', error);
-    res.status(500).json({ 
-      error: 'Server error during verification',
-      type: 'server_error',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    res.status(500).json({ error: 'Verification error', type: 'server_error' });
   }
 });
 
-// Resend OTP schema
-const resendSchema = Joi.object({
-  email: Joi.string().email().required()
-});
+const resendSchema = Joi.object({ email: Joi.string().email().required() });
 
-/**
- * Resend OTP to user's email
- * @route POST /api/auth/resend-otp
- */
 router.post('/resend-otp', async (req, res) => {
-  // Validate request body
   const { error, value } = resendSchema.validate(req.body);
-  if (error) {
-    return res.status(400).json({ 
-      error: error.details[0].message,
-      type: 'validation_error'
-    });
-  }
+  if (error) return res.status(400).json({ error: error.details[0].message, type: 'validation_error' });
 
   const { email } = value;
 
   try {
-    // Find user
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ 
-        error: 'User not found',
-        type: 'not_found'
-      });
+    if (!user || user.isVerified) {
+      return res.status(400).json({ error: 'Invalid request', type: 'invalid_request' });
     }
 
-    // Check if already verified
-    if (user.isVerified) {
-      return res.status(400).json({ 
-        error: 'Account already verified. Please login.',
-        type: 'already_verified'
-      });
-    }
-
-    // Check rate limiting (optional: prevent spam)
-    if (user.otpExpiry && Date.now() < user.otpExpiry - 5 * 60 * 1000) {
-      const remainingTime = Math.ceil((user.otpExpiry - 5 * 60 * 1000 - Date.now()) / 1000);
-      return res.status(429).json({ 
-        error: `Please wait ${remainingTime} seconds before requesting a new OTP`,
-        type: 'rate_limited',
-        remainingTime
-      });
-    }
-
-    // Generate new OTP
     const otp = generateOTP();
-    const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const expiry = Date.now() + 10 * 60 * 1000;
+    await User.findByIdAndUpdate(user._id, { otp, otpExpiry: expiry });
 
-    await User.findByIdAndUpdate(user._id, {
-      otp,
-      otpExpiry: expiry
-    });
-
-    // Send OTP email (non-blocking to prevent Render timeout)
     (async () => {
-      try {
-        await sendOTP(email, otp);
-        console.log(`📧 OTP resent to ${email}`);
-      } catch (sendError) {
-        console.error('Resend OTP email error (non-blocking):', sendError);
-      }
+      try { await sendOTP(email, otp); } catch (e) { console.error('Resend error:', e); }
     })();
 
-    res.json({ 
-      success: true,
-      message: 'OTP resent successfully to your email!',
-      email: email
-    });
+    res.json({ success: true, message: 'OTP resent!' });
 
   } catch (error) {
-    console.error('Resend OTP error:', error);
-    res.status(500).json({ 
-      error: 'Server error while resending OTP',
-      type: 'server_error',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    res.status(500).json({ error: 'Server error', type: 'server_error' });
   }
 });
 
-// Forgot Password schemas
-const forgotSchema = Joi.object({
-  email: Joi.string().email().required()
-});
-
+const forgotSchema = Joi.object({ email: Joi.string().email().required() });
 const resetSchema = Joi.object({
   email: Joi.string().email().required(),
   otp: Joi.string().length(6).required(),
   newPassword: Joi.string().min(6).required()
 });
 
-/**
- * Request password reset OTP
- * @route POST /api/auth/forgot-password
- */
 router.post('/forgot-password', async (req, res) => {
-  // Validate request body
   const { error, value } = forgotSchema.validate(req.body);
-  if (error) {
-    return res.status(400).json({ 
-      error: error.details[0].message,
-      type: 'validation_error'
-    });
-  }
+  if (error) return res.status(400).json({ error: error.details[0].message, type: 'validation_error' });
 
   const { email } = value;
 
@@ -478,98 +358,45 @@ router.post('/forgot-password', async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      // Return success even if user doesn't exist to prevent email enumeration
-      console.log(`ℹ️ Password reset requested for non-existent email: ${email}`);
-      return res.json({ 
-        success: true,
-        message: 'If an account exists, a reset OTP has been sent.',
-        type: 'generic_response'
-      });
+      return res.json({ success: true, message: 'If account exists, OTP sent.' });
     }
 
-    // Generate reset OTP
     const otp = generateOTP();
     const expiry = Date.now() + 10 * 60 * 1000;
-    
-    await User.findByIdAndUpdate(user._id, {
-      otp,
-      otpExpiry: expiry,
-      resetRequestedAt: Date.now()
-    });
-    
-    // Send reset OTP (non-blocking to prevent Render timeout)
+    await User.findByIdAndUpdate(user._id, { otp, otpExpiry: expiry, resetRequestedAt: Date.now() });
+
     (async () => {
-      try {
-        await sendOTP(email, otp, 'reset');
-        console.log(`📧 Password reset OTP sent to ${email}`);
-      } catch (sendError) {
-        console.error('Forgot password email error (non-blocking):', sendError);
-      }
+      try { await sendOTP(email, otp, 'reset'); } catch (e) { console.error('Forgot error:', e); }
     })();
 
-    res.json({ 
-      success: true,
-      message: 'OTP sent successfully for password reset.',
-      type: 'otp_sent'
-    });
+    res.json({ success: true, message: 'OTP sent.' });
 
   } catch (error) {
-    console.error('Forgot password error:', error);
-    res.status(500).json({ 
-      error: 'Server error while generating OTP',
-      type: 'server_error',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    res.status(500).json({ error: 'Server error', type: 'server_error' });
   }
 });
 
-/**
- * Reset user password with OTP verification
- * @route POST /api/auth/reset-password
- */
 router.post('/reset-password', async (req, res) => {
-  // Validate request body
   const { error, value } = resetSchema.validate(req.body);
-  if (error) {
-    return res.status(400).json({ 
-      error: error.details[0].message,
-      type: 'validation_error'
-    });
-  }
+  if (error) return res.status(400).json({ error: error.details[0].message, type: 'validation_error' });
 
   const { email, otp, newPassword } = value;
 
   try {
-    // Find user
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
-      return res.status(404).json({ 
-        error: 'User not found',
-        type: 'not_found'
-      });
+      return res.status(404).json({ error: 'User not found', type: 'not_found' });
     }
 
-    // Validate OTP
     if (!user.otp || user.otp !== otp) {
-      return res.status(400).json({ 
-        error: 'Invalid or expired OTP',
-        type: 'invalid_otp'
-      });
+      return res.status(400).json({ error: 'Invalid OTP', type: 'invalid_otp' });
     }
 
-    // Check OTP expiry
     if (Date.now() > user.otpExpiry) {
-      return res.status(400).json({ 
-        error: 'OTP has expired. Please request a new one.',
-        type: 'otp_expired',
-        canResend: true
-      });
+      return res.status(400).json({ error: 'OTP expired', type: 'otp_expired' });
     }
 
-    // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    // Update user password and clear OTP
     await User.findByIdAndUpdate(user._id, {
       password: hashedPassword,
       isVerified: true,
@@ -578,21 +405,10 @@ router.post('/reset-password', async (req, res) => {
       resetRequestedAt: undefined
     });
 
-    console.log(`🔑 Password reset successful for ${email}`);
-
-    res.json({ 
-      success: true,
-      message: 'Password has been successfully reset!',
-      type: 'password_updated'
-    });
+    res.json({ success: true, message: 'Password reset!' });
 
   } catch (error) {
-    console.error('Reset password error:', error);
-    res.status(500).json({ 
-      error: 'Server error during password reset',
-      type: 'server_error',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    res.status(500).json({ error: 'Server error', type: 'server_error' });
   }
 });
 
