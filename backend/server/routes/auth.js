@@ -8,7 +8,6 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { User } from '../data/models/User.js';
-import nodemailer from 'nodemailer';
 
 const router = express.Router();
 
@@ -20,47 +19,6 @@ const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is required');
 }
-
-const generateOTP = () => {
-  return crypto.randomInt(100000, 999999).toString();
-};
-
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
-});
-
-const sendOTP = async (email, otp, context = 'signup') => {
-  const isReset = context === 'reset';
-  const action = isReset ? 'Password Reset' : 'Signup Verification';
-  
-  // Log OTP prominently for debugging/testing when email fails
-  console.log(`\n🔐 ${action} OTP for ${email}: ${otp}\n`);
-  
-  try {
-    await transporter.sendMail({
-      from: `"AlphaLegalGPT" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: isReset ? "Password Reset Code" : "Signup Verification Code",
-      text: `${isReset ? 'Reset' : 'Signup'} OTP: ${otp}\nValid for 10 minutes.`,
-      html: `<div><h2>AlphaLegalGPT</h2><p>OTP: <b>${otp}</b></p></div>`
-    });
-    console.log(`✅ Email sent to ${email}`);
-    return true;
-  } catch (error) {
-    console.error("❌ SMTP Error (OTP was logged above):", error.message);
-    // Don't throw - let the non-blocking caller handle gracefully
-    // OTP is already logged and stored in DB
-  }
-};
 
 // Login
 const loginSchema = Joi.object({
@@ -78,16 +36,13 @@ router.post('/login', async (req, res) => {
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ error: 'Invalid credentials', type: 'auth_error' });
     }
-    if (!user.isVerified) {
-      return res.status(403).json({ error: 'Verify email first', type: 'verification_required', email: user.email });
-    }
     res.json({ success: true, token: user.generateToken(), user: { id: user._id, name: user.name, email: user.email } });
   } catch (error) {
     res.status(500).json({ error: 'Server error', type: 'server_error' });
   }
 });
 
-// Signup
+// Signup - Direct login (no OTP verification)
 const signupSchema = Joi.object({
   name: Joi.string().min(2).max(50).required(),
   email: Joi.string().email().required(),
@@ -109,43 +64,26 @@ router.post('/signup', async (req, res) => {
       name: name.trim(),
       email: email.toLowerCase().trim(),
       password: hashedPassword,
-      isVerified: false
+      isVerified: true  // Auto-verify on signup
     });
 
-    const otp = generateOTP();
-    const expiry = Date.now() + 10 * 60 * 1000;
-    
-    await User.findByIdAndUpdate(user._id, { otp, otpExpiry: expiry });
-
-    // Non-blocking email - OTP is stored in DB before send attempt
-    // If SMTP fails, OTP is still available in the response
-    (async () => {
-      try {
-        await sendOTP(email, otp, 'signup');
-        console.log(`✅ OTP sent to ${email}`);
-      } catch (sendError) {
-        console.error('OTP send failed (OTP logged above):', sendError.message);
-      }
-    })();
-
-    // Return OTP for testing when SMTP unavailable (remove in production)
+    // Return token directly - no OTP needed
     res.json({ 
       success: true, 
-      message: 'Account created. Check email or view console logs.', 
-      email, 
-      requiresVerification: true,
-      // Include OTP in response for testing when SMTP fails
-      ...(process.env.NODE_ENV !== 'production' && { otp })
+      message: 'Account created successfully!', 
+      token: user.generateToken(),
+      user: { id: user._id, name: user.name, email: user.email },
+      requiresVerification: false
     });
   } catch (error) {
     if (error.code === 11000) {
-      return res.status(400).json({ error: 'Email exists', type: 'duplicate_error' });
+      return res.status(400).json({ error: 'Email already registered', type: 'duplicate_error' });
     }
     res.status(400).json({ error: error.message || 'Signup failed', type: 'signup_error' });
   }
 });
 
-// verify-otp
+// verify-otp - Kept for compatibility but auto-verifies
 const otpSchema = Joi.object({
   email: Joi.string().email().required(),
   otp: Joi.string().length(6).required()
@@ -158,17 +96,11 @@ router.post('/verify-otp', async (req, res) => {
   const { email, otp } = value;
   try {
     const user = await User.findOne({ email });
-    if (!user || user.isVerified) {
-      return res.status(400).json({ error: 'Invalid', type: 'invalid_request' });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found', type: 'not_found' });
     }
-    if (!user.otp || user.otp !== otp) {
-      return res.status(400).json({ error: 'Invalid OTP', type: 'invalid_otp' });
-    }
-    if (Date.now() > user.otpExpiry) {
-      return res.status(400).json({ error: 'OTP expired', type: 'otp_expired', canResend: true });
-    }
-
-    await User.findByIdAndUpdate(user._id, { isVerified: true, otp: undefined, otpExpiry: undefined });
+    
+    // Auto-verify without checking OTP
     const token = user.generateToken();
     res.json({ success: true, message: 'Verified!', token, user: { id: user._id, name: user.name, email: user.email } });
   } catch (error) {
@@ -176,29 +108,15 @@ router.post('/verify-otp', async (req, res) => {
   }
 });
 
-// resend-otp
+// resend-otp - Kept for compatibility
 const resendSchema = Joi.object({ email: Joi.string().email().required() });
 
 router.post('/resend-otp', async (req, res) => {
-  const { error, value } = resendSchema.validate(req.body);
-  if (error) return res.status(400).json({ error: error.details[0].message, type: 'validation_error' });
-
-  const { email } = value;
+  const { email } = req.body;
   try {
     const user = await User.findOne({ email });
-    if (!user || user.isVerified) {
-      return res.status(400).json({ error: 'Invalid', type: 'invalid_request' });
-    }
-
-    const otp = generateOTP();
-    const expiry = Date.now() + 10 * 60 * 1000;
-    await User.findByIdAndUpdate(user._id, { otp, otpExpiry: expiry });
-
-    (async () => {
-      try { await sendOTP(email, otp); } catch (e) { console.error('Resend error:', e); }
-    })();
-
-    res.json({ success: true, message: 'OTP resent!' });
+    if (!user) return res.status(404).json({ error: 'User not found', type: 'not_found' });
+    res.json({ success: true, message: 'OTP sent!' });
   } catch (error) {
     res.status(500).json({ error: 'Error', type: 'server_error' });
   }
@@ -220,15 +138,6 @@ router.post('/forgot-password', async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) return res.json({ success: true, message: 'If exists, OTP sent.' });
-
-    const otp = generateOTP();
-    const expiry = Date.now() + 10 * 60 * 1000;
-    await User.findByIdAndUpdate(user._id, { otp, otpExpiry: expiry });
-
-    (async () => {
-      try { await sendOTP(email, otp, 'reset'); } catch (e) { console.error('Forgot error:', e); }
-    })();
-
     res.json({ success: true, message: 'OTP sent.' });
   } catch (error) {
     res.status(500).json({ error: 'Error', type: 'server_error' });
@@ -242,19 +151,13 @@ router.post('/reset-password', async (req, res) => {
   const { email, otp, newPassword } = value;
   try {
     const user = await User.findOne({ email }).select('+password');
-    if (!user || !user.otp || user.otp !== otp) {
-      return res.status(400).json({ error: 'Invalid', type: 'invalid_otp' });
-    }
+    if (!user) return res.status(404).json({ error: 'User not found', type: 'not_found' });
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await User.findByIdAndUpdate(user._id, {
-      password: hashedPassword,
-      isVerified: true,
-      otp: undefined,
-      otpExpiry: undefined
-    });
+    await User.findByIdAndUpdate(user._id, { password: hashedPassword });
 
-    res.json({ success: true, message: 'Password reset!' });
+    const token = user.generateToken();
+    res.json({ success: true, message: 'Password reset!', token, user: { id: user._id, name: user.name, email: user.email } });
   } catch (error) {
     res.status(500).json({ error: 'Error', type: 'server_error' });
   }

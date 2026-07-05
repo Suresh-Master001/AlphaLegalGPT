@@ -20,10 +20,8 @@ const userSchema = new mongoose.Schema({
   },
   isVerified: {
     type: Boolean,
-    default: false
+    default: true  // Auto-verify on signup (no OTP required)
   },
-  otp: String,
-  otpExpiry: Number,
 }, {
   timestamps: true
 });
