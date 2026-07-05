@@ -93,9 +93,15 @@ const sendOTP = async (email, otp, context = 'signup') => {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 15000,
+    requireTLS: true,
+    // Force IPv4 DNS lookup - critical for Render
+    dnsLookup: (hostname, opts, callback) => {
+      const dns = require('dns');
+      dns.lookup(hostname, { family: 4 }, callback);
+    },
   });
 
   try {
