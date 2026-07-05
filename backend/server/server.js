@@ -46,19 +46,40 @@ const limiter = rateLimit({
 app.use(limiter);
 app.use(morgan('combined'));
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:5173').split(',');
+// CORS
+// Allowed origins for CORS (local dev defaults; set ALLOWED_ORIGINS/FRONTEND_URL for production).
+const defaultAllowed = ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'];
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL || defaultAllowed.join(','))
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
+    const reqOrigin = origin || '';
+    if (!reqOrigin) return callback(null, true);
+
+    if (allowedOrigins.includes(reqOrigin)) return callback(null, reqOrigin);
+
+    // Allow same-origin / direct requests.
+    return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 204,
 }));
+
+// Handle preflight with the same CORS settings as normal requests.
+// This prevents browsers from blocking OPTIONS calls.
+app.options('*', cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 204,
+}));
+
 app.use(express.json());
 
 // Request logging

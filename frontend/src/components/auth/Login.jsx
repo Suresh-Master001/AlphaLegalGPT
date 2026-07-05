@@ -3,15 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, Link } from 'react-router-dom';
 import { FiMail, FiLoader, FiAlertCircle } from 'react-icons/fi';
 
-import { useAuth } from '../contexts/AuthContext';
-import ForgotPasswordModal from './ForgotPasswordModal';
+import { useAuth } from '../../contexts/AuthContext';
+import ForgotPasswordModal from '../modals/ForgotPasswordModal';
 
-import AuthLayout from './auth/AuthLayout';
-import AuthCard from './auth/AuthCard';
-import FormField from './auth/FormField';
-import PasswordInput from './auth/PasswordInput';
-import PrimaryButton from './auth/PrimaryButton';
-import ErrorBox from './auth/ErrorBox';
+import AuthLayout from './AuthLayout';
+import AuthCard from './AuthCard';
+import FormField from './FormField';
+import PasswordInput from './PasswordInput';
+import PrimaryButton from './PrimaryButton';
+import ErrorBox from './ErrorBox';
 
 /**
  * Login Component

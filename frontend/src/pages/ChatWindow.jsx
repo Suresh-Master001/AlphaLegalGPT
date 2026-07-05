@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { FiCpu } from 'react-icons/fi';
-import ChatMessage from '../components/ChatMessage';
+import ChatMessage from '../components/chat/ChatMessage';
 
 const TypingIndicator = () => (
   <div className="flex gap-4 mb-6">

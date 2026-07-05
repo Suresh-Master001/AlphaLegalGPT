@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import Sidebar from './Sidebar';
+import Sidebar from '../components/layout/Sidebar';
 import { FiBook } from 'react-icons/fi';
 import ChatWindow from './ChatWindow';
-import ChatInput from '../components/ChatInput';
-import SettingsModal from '../components/SettingsModal';
-import NearbyOfficesSidebar from '../components/NearbyOfficesSidebar';
-import LawReferenceSidebar from '../components/LawReferenceSidebar';
+import ChatInput from '../components/chat/ChatInput';
+import SettingsModal from '../components/modals/SettingsModal';
+import NearbyOfficesSidebar from '../components/chat/NearbyOfficesSidebar';
+import LawReferenceSidebar from '../components/chat/LawReferenceSidebar';
 import useChat from '../hooks/useChat';
 import { checkHealth } from '../services/api';
 

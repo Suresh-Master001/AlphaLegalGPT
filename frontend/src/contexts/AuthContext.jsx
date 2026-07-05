@@ -68,6 +68,9 @@ export const AuthProvider = ({ children }) => {
         window.addEventListener(event, resetTimer);
       });
 
+      // Do NOT call logout on mousedown; that would block OTP entry.
+      // If a dedicated inactivity timeout is desired, use the timer inside resetTimer().
+
       // Initial timer start
       resetTimer();
 

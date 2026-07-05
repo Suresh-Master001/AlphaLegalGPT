@@ -3,15 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, Link } from 'react-router-dom';
 import { FiUser, FiMail, FiLoader, FiCheck, FiArrowLeft } from 'react-icons/fi';
 
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import OTPModal from './OTPModal';
 
-import AuthLayout from './auth/AuthLayout';
-import AuthCard from './auth/AuthCard';
-import FormField from './auth/FormField';
-import PasswordInput from './auth/PasswordInput';
-import PrimaryButton from './auth/PrimaryButton';
-import ErrorBox from './auth/ErrorBox';
+import AuthLayout from './AuthLayout';
+import AuthCard from './AuthCard';
+import FormField from './FormField';
+import PasswordInput from './PasswordInput';
+import PrimaryButton from './PrimaryButton';
+import ErrorBox from './ErrorBox';
 
 /**
  * Signup Component

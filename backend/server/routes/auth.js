@@ -33,7 +33,12 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  // Fail fast instead of hanging forever (prevents frontend Abort timeout)
+  connectionTimeout: 10_000, // 10s
+  greetingTimeout: 10_000, // 10s
+  socketTimeout: 10_000, // 10s
 });
+
 
 const sendOTP = async (email, otp, context = 'signup') => {
   console.log(`📧 Attempting to send OTP ${otp} to ${email}`);
@@ -204,28 +209,26 @@ router.post('/signup', async (req, res) => {
       otpExpiry: expiry
     }, { new: true });
 
-    // Send OTP email
-    try {
-      await sendOTP(email, otp);
-      console.log(`✅ Signup successful for ${email}, OTP sent`);
-      
-      res.json({ 
-        success: true,
-        message: 'OTP sent successfully to your email!',
-        email: email,
-        requiresVerification: true
-      });
-    } catch (sendError) {
-      console.error('OTP send error:', sendError);
-      // Delete user if OTP sending failed
-      await User.findByIdAndDelete(user._id);
-      
-      return res.status(400).json({ 
-        success: false,
-        error: sendError.message || 'Failed to send OTP email. Please try again.',
-        type: 'email_error'
-      });
-    }
+    // Send OTP email (non-blocking)
+    // If SMTP/email is slow, frontend should not fail with Abort timeout.
+    // OTP is already stored in Mongo before this.
+    (async () => {
+      try {
+        await sendOTP(email, otp, 'signup');
+        console.log(`✅ Signup OTP email queued/sent for ${email}`);
+      } catch (sendError) {
+        console.error('OTP send error (non-blocking):', sendError);
+      }
+    })();
+
+    res.json({ 
+      success: true,
+      message: 'Account created. If email is delayed, request a new OTP.',
+      email: email,
+      requiresVerification: true,
+      emailDelivery: 'pending'
+    });
+
 
   } catch (error) {
     console.error('Signup error:', error);

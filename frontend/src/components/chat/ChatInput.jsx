@@ -8,7 +8,7 @@ import {
   FiX,
   FiMapPin as FiMapPinIcon
 } from 'react-icons/fi';
-import { uploadDocument } from '../services/api';
+import { uploadDocument } from '../../services/api';
 
 const ChatInput = ({ value: message, onChange: setMessage, onSendMessage, isLoading, disabled, isLocationEnabled, isLocationLoading, onLocationToggle, hasGeneratedResponse }) => {
   const { t, i18n } = useTranslation();

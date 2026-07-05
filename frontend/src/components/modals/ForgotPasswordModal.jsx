@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiMail, FiLock, FiX, FiCheckCircle } from 'react-icons/fi';
-import { forgotPassword, resetPassword } from '../services/api';
+import { forgotPassword, resetPassword } from '../../services/api';
 
 const ForgotPasswordModal = ({ isOpen, onClose }) => {
   const [step, setStep] = useState(1);

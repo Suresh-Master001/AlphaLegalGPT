@@ -11,7 +11,7 @@ import {
   FiLogOut
 } from 'react-icons/fi';
 import { FaGavel } from 'react-icons/fa';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Sidebar = ({ 
   chats, 

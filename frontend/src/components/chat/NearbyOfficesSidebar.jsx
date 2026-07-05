@@ -64,9 +64,8 @@ const OFFICE_ICONS = {
   'Juvenile Home': '🏠',
   'Notary Public Office': '🖊️',
   'Advocate / Lawyer Office': '💼',
-  'Public Prosecutor Office': '💼',
+  'Public Prosecutor Office': '📋',
   'Registrar General Office': '📜',
-  'Municipality Office': '🏢',
   'EB Office / TANGEDCO': '⚡',
   'Water Board': '🚰',
   'BDO Office / Panchayat Union': '🏘️',
@@ -158,7 +157,6 @@ const NearbyOfficesSidebar = ({ query, response, location, isOpen, onClose, isLo
     ];
 
     const matched = [];
-    const seen = new Set();
     
     for (const rule of rules) {
       const match = rule.kw.some(keyword => {
@@ -173,7 +171,6 @@ const NearbyOfficesSidebar = ({ query, response, location, isOpen, onClose, isLo
       });
 
       if (match) {
-        seen.add(rule.label);
         matched.push(buildOffice(rule.label, rule.searchName));
       }
     }

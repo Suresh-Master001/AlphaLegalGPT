@@ -238,45 +238,75 @@ export const loginUser = async (email, password) => {
  * @route POST /api/auth/signup
  */
 export const signupUser = async (name, email, password) => {
-  const response = await fetch(`${API_BASE_URL}/auth/signup`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ name, email, password }),
-    signal: AbortSignal.timeout(15000)
-  });
-  
-  return handleApiResponse(response);
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ name, email, password }),
+      signal: AbortSignal.timeout(15000)
+    });
+    
+    return handleApiResponse(response);
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      const err = new Error('Signup request timed out (OTP email may be delayed). Try again or click Resend OTP.');
+      err.type = 'otp_timeout';
+      throw err;
+    }
+    throw error;
+  }
 };
+
 
 /**
  * Verify OTP
  * @route POST /api/auth/verify-otp
  */
 export const verifyOTP = async (email, otp) => {
-  const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ email, otp }),
-    signal: AbortSignal.timeout(15000)
-  });
-  
-  return handleApiResponse(response);
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email, otp }),
+      signal: AbortSignal.timeout(15000)
+    });
+    
+    return handleApiResponse(response);
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      const err = new Error('OTP verification timed out. Please wait a moment and try again.');
+      err.type = 'otp_timeout';
+      throw err;
+    }
+    throw error;
+  }
 };
+
 
 /**
  * Resend OTP
  * @route POST /api/auth/resend-otp
  */
 export const resendOTP = async (email) => {
-  const response = await fetch(`${API_BASE_URL}/auth/resend-otp`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ email }),
-    signal: AbortSignal.timeout(15000)
-  });
-  
-  return handleApiResponse(response);
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/resend-otp`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email }),
+      signal: AbortSignal.timeout(15000)
+    });
+    
+    return handleApiResponse(response);
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      const err = new Error('Resend OTP request timed out (email delivery may be delayed). Try again.');
+      err.type = 'otp_timeout';
+      throw err;
+    }
+    throw error;
+  }
 };
+
 
 /**
  * Request password reset
