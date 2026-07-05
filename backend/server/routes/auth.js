@@ -27,36 +27,40 @@ const generateOTP = () => {
 
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.EMAIL_PORT || '587'),
-  secure: false, // true for 465, false for other ports
+  port: parseInt(process.env.EMAIL_PORT || '465'),
+  secure: true, // true for 465 (SSL), false for 587 (TLS)
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  // Fail fast instead of hanging forever (prevents frontend Abort timeout)
-  connectionTimeout: 10_000, // 10s
-  greetingTimeout: 10_000, // 10s
-  socketTimeout: 10_000, // 10s
+  // Connection timeouts
+  connectionTimeout: 15_000, // 15s
+  greetingTimeout: 15_000, // 15s
+  socketTimeout: 15_000, // 15s
   // Force IPv4 to avoid ENETUNREACH on Render
   family: 4,
-  tls: {
-    rejectUnauthorized: false
-  }
 });
 
 
 const sendOTP = async (email, otp, context = 'signup') => {
   console.log(`📧 Attempting to send OTP ${otp} to ${email}`);
-  try {
-    const isReset = context === 'reset';
-    const subject = isReset 
-      ? "Your Password Reset Code" 
-      : "Your Signup Verification Code";
-      
-    const textContext = isReset 
-      ? "Your OTP to reset your AlphaLegalGPT password is:" 
-      : "Your OTP for AlphaLegalGPT signup is:";
+  
+  const isReset = context === 'reset';
+  const subject = isReset 
+    ? "Your Password Reset Code" 
+    : "Your Signup Verification Code";
+    
+  const textContext = isReset 
+    ? "Your OTP to reset your AlphaLegalGPT password is:" 
+    : "Your OTP for AlphaLegalGPT signup is:";
 
+  // Fallback for development/testing: log OTP to console
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.log(`⚠️ EMAIL not configured. OTP for ${email}: ${otp}`);
+    return true;
+  }
+
+  try {
     let info = await transporter.sendMail({
       from: `"AlphaLegalGPT Assistant" <${process.env.EMAIL_USER}>`,
       to: email,
@@ -79,8 +83,9 @@ const sendOTP = async (email, otp, context = 'signup') => {
     console.log(`✅ Email sent successfully: ${info.messageId}`);
     return true;
   } catch (error) {
-    console.error("❌ Error sending email:", error);
-    throw new Error('Failed to send email. Ensure your email configuration is correct.');
+    console.error("❌ Error sending email:", error.message);
+    // Don't throw - let the non-blocking caller handle gracefully
+    throw error;
   }
 };
 
