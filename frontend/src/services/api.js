@@ -6,7 +6,7 @@ const API_BASE_URL = (() => {
   if (!trimmed) return '/api';
   return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
 })();
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (import.meta.env.PROD ? 'https://alphalegalgpt.onrender.com' : window.location.origin);
 
 const getStoredToken = () => {
   return localStorage.getItem('authToken') || 
