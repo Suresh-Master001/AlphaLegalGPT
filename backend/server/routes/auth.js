@@ -37,6 +37,11 @@ const transporter = nodemailer.createTransport({
   connectionTimeout: 10_000, // 10s
   greetingTimeout: 10_000, // 10s
   socketTimeout: 10_000, // 10s
+  // Force IPv4 to avoid ENETUNREACH on Render
+  family: 4,
+  tls: {
+    rejectUnauthorized: false
+  }
 });
 
 
