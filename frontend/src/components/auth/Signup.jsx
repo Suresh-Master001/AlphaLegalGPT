@@ -124,12 +124,11 @@ const Signup = () => {
    * Handle form submission
    * @param {Event} e - Form submit event
    */
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (isLoading) return;
     
-    // Validate form
     const validation = validateForm();
     if (!validation.valid) {
       setError(validation.error);
@@ -145,6 +144,12 @@ const Signup = () => {
       const result = await signup(formData.name, formData.email, formData.password);
       
       if (result.requiresVerification) {
+        // Store OTP for display if email failed (development mode)
+        if (result.otp) {
+          console.log('OTP for testing:', result.otp);
+          setError(`Email delivery may be delayed. OTP: ${result.otp}`);
+          setErrorType('email');
+        }
         setStep('otp');
       }
     } catch (err) {
