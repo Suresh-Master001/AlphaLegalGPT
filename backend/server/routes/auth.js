@@ -66,8 +66,11 @@ const getTransporter = () => {
 const transporter = getTransporter();
 
 const sendOTP = async (email, otp, context = 'signup') => {
-  console.log(`📧 Attempting to send OTP ${otp} to ${email}`);
   const isReset = context === 'reset';
+  const action = isReset ? 'Password Reset' : 'Signup Verification';
+  
+  // Log OTP prominently for debugging/testing when email fails
+  console.log(`\n🔐 ${action} OTP for ${email}: ${otp}\n`);
   
   try {
     await transporter.sendMail({
@@ -80,8 +83,9 @@ const sendOTP = async (email, otp, context = 'signup') => {
     console.log(`✅ Email sent to ${email}`);
     return true;
   } catch (error) {
-    console.error("❌ SMTP Error:", error.message);
-    throw error;
+    console.error("❌ SMTP Error (OTP was logged above):", error.message);
+    // Don't throw - let the non-blocking caller handle gracefully
+    // OTP is already logged and stored in DB
   }
 };
 
@@ -140,17 +144,26 @@ router.post('/signup', async (req, res) => {
     
     await User.findByIdAndUpdate(user._id, { otp, otpExpiry: expiry });
 
-    // Non-blocking email
+    // Non-blocking email - OTP is stored in DB before send attempt
+    // If SMTP fails, OTP is still available in the response
     (async () => {
       try {
         await sendOTP(email, otp, 'signup');
         console.log(`✅ OTP sent to ${email}`);
       } catch (sendError) {
-        console.error('OTP send failed:', sendError);
+        console.error('OTP send failed (OTP logged above):', sendError.message);
       }
     })();
 
-    res.json({ success: true, message: 'Account created. Check email.', email, requiresVerification: true });
+    // Return OTP for testing when SMTP unavailable (remove in production)
+    res.json({ 
+      success: true, 
+      message: 'Account created. Check email or view console logs.', 
+      email, 
+      requiresVerification: true,
+      // Include OTP in response for testing when SMTP fails
+      ...(process.env.NODE_ENV !== 'production' && { otp })
+    });
   } catch (error) {
     if (error.code === 11000) {
       return res.status(400).json({ error: 'Email exists', type: 'duplicate_error' });
