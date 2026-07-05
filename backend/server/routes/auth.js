@@ -408,9 +408,15 @@ router.post('/resend-otp', async (req, res) => {
       otpExpiry: expiry
     });
 
-    // Send OTP email
-    await sendOTP(email, otp);
-    console.log(`📧 OTP resent to ${email}`);
+    // Send OTP email (non-blocking to prevent Render timeout)
+    (async () => {
+      try {
+        await sendOTP(email, otp);
+        console.log(`📧 OTP resent to ${email}`);
+      } catch (sendError) {
+        console.error('Resend OTP email error (non-blocking):', sendError);
+      }
+    })();
 
     res.json({ 
       success: true,
@@ -478,10 +484,15 @@ router.post('/forgot-password', async (req, res) => {
       resetRequestedAt: Date.now()
     });
     
-    // Send reset OTP
-    await sendOTP(email, otp, 'reset');
-    
-    console.log(`📧 Password reset OTP sent to ${email}`);
+    // Send reset OTP (non-blocking to prevent Render timeout)
+    (async () => {
+      try {
+        await sendOTP(email, otp, 'reset');
+        console.log(`📧 Password reset OTP sent to ${email}`);
+      } catch (sendError) {
+        console.error('Forgot password email error (non-blocking):', sendError);
+      }
+    })();
 
     res.json({ 
       success: true,
