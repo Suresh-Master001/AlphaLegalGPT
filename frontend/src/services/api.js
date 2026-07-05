@@ -238,23 +238,14 @@ export const loginUser = async (email, password) => {
  * @route POST /api/auth/signup
  */
 export const signupUser = async (name, email, password) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/signup`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ name, email, password }),
-      signal: AbortSignal.timeout(15000)
-    });
-    
-    return handleApiResponse(response);
-  } catch (error) {
-    if (error?.name === 'AbortError') {
-      const err = new Error('Signup request timed out (OTP email may be delayed). Try again or click Resend OTP.');
-      err.type = 'otp_timeout';
-      throw err;
-    }
-    throw error;
-  }
+  const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ name, email, password }),
+    signal: AbortSignal.timeout(15000)
+  });
+  
+  return handleApiResponse(response);
 };
 
 

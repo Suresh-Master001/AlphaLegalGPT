@@ -132,6 +132,21 @@ export const AuthProvider = ({ children }) => {
         throw new Error(response.error || 'Signup failed');
       }
       
+      // Auto-login after successful signup if token is returned
+      if (response.token) {
+        const { token, user: userData } = response;
+        const finalUser = userData || { email, name };
+        
+        sessionStorage.setItem('authToken', token);
+        sessionStorage.setItem('user', JSON.stringify(finalUser));
+        
+        setToken(token);
+        setUser(finalUser);
+        setIsAuthenticated(true);
+        
+        return { success: true, token, user: finalUser };
+      }
+      
       return {
         success: true,
         message: response.message,
