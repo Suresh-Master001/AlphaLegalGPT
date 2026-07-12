@@ -24,7 +24,6 @@ const OFFICE_ICONS = {
   'All Women Police Station': '👩‍✈️',
   'Traffic Police Station': '🚦',
   'Cyber Crime Police Station': '💻',
-  'Crime Branch (CB-CID)': '🔍',
   'Railway Police (RPF / GRP)': '🚆',
   'Special Task Force (STF)': '🔫',
   'Coastal Security Police': '🚤',
@@ -187,22 +186,22 @@ const NearbyOfficesSidebar = ({ query, response, location, isOpen, onClose, isLo
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: 320, opacity: 0 }}
           transition={{ duration: 0.35, ease: 'easeOut' }}
-          className="fixed right-0 top-0 h-full w-[300px] bg-slate-900/95 backdrop-blur-xl border-l border-white/10 flex flex-col z-50 shadow-2xl"
+          className="fixed right-0 top-0 h-full w-[300px] bg-white border-l border-[#E7E9F3] flex flex-col z-50 shadow-2xl"
         >
           {/* Header */}
-          <div className="p-4 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-emerald-500/10 to-transparent">
+          <div className="p-4 border-b border-[#E7E9F3] flex items-center justify-between bg-white sticky top-0 z-10">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                <FiMapPin className="w-4 h-4 text-emerald-400" />
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#2541D6] to-[#6B21D9] shadow-[0_6px_16px_rgba(107,33,217,0.25)] flex items-center justify-center flex-shrink-0">
+                <FiMapPin className="w-4 h-4 text-white" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-white">Nearby Offices</h2>
-                <p className="text-xs text-white/50">Searching 1m to 10km radius</p>
+                <h2 className="text-sm font-display font-bold text-[#0B0D1C]">Nearby Offices</h2>
+                <p className="text-xs text-[#5C6178] font-body">Searching 1m to 10km radius</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 text-white/70 hover:text-white transition-colors"
+              className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#F6F7FB] text-[#9AA0B4] hover:text-[#0B0D1C] transition-colors"
             >
               <FiX className="w-4 h-4" />
             </button>
@@ -212,47 +211,47 @@ const NearbyOfficesSidebar = ({ query, response, location, isOpen, onClose, isLo
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {!isLocationEnabled ? (
               <div className="flex flex-col items-center justify-center h-full text-center gap-3 py-10">
-                <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-2xl">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#2541D6] to-[#6B21D9] flex items-center justify-center text-2xl">
                   📍
                 </div>
-                <p className="text-sm font-medium text-white">Location not enabled</p>
-                <p className="text-xs text-white/70 leading-relaxed">
+                <p className="text-sm font-display font-semibold text-[#0B0D1C]">Location not enabled</p>
+                <p className="text-xs text-[#5C6178] leading-relaxed font-body">
                   Enable your location using the button in the chat to see nearby offices within 10 km.
                 </p>
               </div>
             ) : !hasGeneratedResponse ? (
               <div className="flex flex-col items-center justify-center h-full text-center gap-4 py-10 px-6">
-                <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 flex items-center justify-center text-3xl animate-bounce">
+                <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-[#2541D6]/20 to-[#6B21D9]/20 flex items-center justify-center text-3xl">
                   💡
                 </div>
-                <p className="text-sm font-bold text-white">Ready to search!</p>
-                <p className="text-xs text-white/70 leading-relaxed">
+                <p className="text-sm font-display font-bold text-[#0B0D1C]">Ready to search!</p>
+                <p className="text-xs text-[#5C6178] leading-relaxed font-body">
                   Please ask a legal question first (e.g. Community Certificate, Legal Notice). 
                 </p>
-                <div className="mt-2 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
-                  <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider mb-1">How it works:</p>
-                  <p className="text-[11px] text-white/70">
-                    Once the assistant responds, the location icon will <b>blink</b>. Click it then to see offices within <b>10 km</b>.
+                <div className="mt-2 p-3 rounded-xl bg-gradient-to-r from-[#2541D6]/5 to-[#6B21D9]/5 border border-[#E7E9F3]">
+                  <p className="text-[10px] text-[#2541D6] font-mono font-semibold uppercase tracking-wider mb-1">How it works:</p>
+                  <p className="text-[11px] text-[#5C6178] font-body">
+                    Once the assistant responds, the location icon will blink. Click it then to see offices within 10 km.
                   </p>
                 </div>
               </div>
             ) : offices.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center gap-3 py-10">
-                <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-2xl">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#2541D6]/20 to-[#6B21D9]/20 flex items-center justify-center text-2xl">
                   🏛️
                 </div>
-                <p className="text-sm font-semibold text-white">No Nearby Offices</p>
-                <p className="text-xs text-white/70 leading-relaxed">
+                <p className="text-sm font-display font-semibold text-[#0B0D1C]">No Nearby Offices</p>
+                <p className="text-xs text-[#5C6178] leading-relaxed font-body">
                   Ask a legal question (e.g. community certificate, FIR, property registration) to see relevant offices within 10 km.
                 </p>
-                <div className="mt-2 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                  <p className="text-xs text-emerald-400 font-medium">📍 Location is active</p>
-                  <p className="text-xs text-white/70 mt-0.5">Offices will appear after your question</p>
+                <div className="mt-2 px-3 py-2 rounded-lg bg-gradient-to-r from-[#2541D6]/5 to-[#6B21D9]/5 border border-[#E7E9F3]">
+                  <p className="text-xs text-[#2541D6] font-medium font-body">📍 Location is active</p>
+                  <p className="text-xs text-[#9AA0B4] mt-0.5 font-body">Offices will appear after your question</p>
                 </div>
               </div>
             ) : (
               <>
-                <p className="text-xs text-white/50 px-1 pb-1">
+                <p className="text-xs text-[#9AA0B4] px-1 pb-1 font-body">
                   {offices.length} office{offices.length > 1 ? 's' : ''} found near you
                 </p>
                 {offices.map((office, index) => (
@@ -261,7 +260,7 @@ const NearbyOfficesSidebar = ({ query, response, location, isOpen, onClose, isLo
                     initial={{ opacity: 0, x: 30 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.08, duration: 0.3 }}
-                    className="group rounded-xl border border-white/10 bg-white/5 hover:border-emerald-500/40 transition-all p-4 shadow-sm"
+                    className="group rounded-xl border border-[#E7E9F3] bg-white hover:border-[#2541D6]/30 transition-all p-4 shadow-sm"
                   >
                     {/* Office name */}
                     <div className="flex items-center gap-3 mb-3">
@@ -269,10 +268,10 @@ const NearbyOfficesSidebar = ({ query, response, location, isOpen, onClose, isLo
                         {OFFICE_ICONS[office.label] || '🏢'}
                       </span>
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white leading-tight truncate">
+                        <p className="text-sm font-display font-semibold text-[#0B0D1C] leading-tight truncate">
                           {office.label}
                         </p>
-                        <p className="text-xs text-white/50 mt-0.5">Tap for directions</p>
+                        <p className="text-xs text-[#9AA0B4] mt-0.5 font-body">Tap for directions</p>
                       </div>
                     </div>
 
@@ -281,7 +280,7 @@ const NearbyOfficesSidebar = ({ query, response, location, isOpen, onClose, isLo
                       href={office.directionsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-all active:scale-95 shadow-md"
+                      className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-gradient-to-r from-[#2541D6] to-[#6B21D9] hover:from-[#1e3bb8] hover:to-[#5B1ED6] text-white text-sm font-body font-medium transition-all active:scale-95 shadow-md"
                     >
                       <FiNavigation className="w-4 h-4" />
                       Get Directions
@@ -293,8 +292,8 @@ const NearbyOfficesSidebar = ({ query, response, location, isOpen, onClose, isLo
           </div>
 
           {/* Footer hint */}
-          <div className="p-3 border-t border-white/10 mt-auto">
-            <p className="text-center text-[10px] text-white/50 opacity-70">
+          <div className="p-3 border-t border-[#E7E9F3] mt-auto">
+            <p className="text-center text-[10px] text-[#9AA0B4] opacity-70 font-body">
               🗺️ Opens in Google Maps with driving route
             </p>
           </div>

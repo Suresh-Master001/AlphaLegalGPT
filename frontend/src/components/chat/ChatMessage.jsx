@@ -9,7 +9,7 @@ import {
   FiAlertCircle,
   FiMapPin as FiMapPinIcon 
 } from 'react-icons/fi';
-import { FaRobot, FaUserCircle } from 'react-icons/fa';
+import { FaUserCircle } from 'react-icons/fa';
 
 const ChatMessage = ({ message, isStreaming }) => {
   const { t } = useTranslation();
@@ -34,10 +34,12 @@ const ChatMessage = ({ message, isStreaming }) => {
       {/* Avatar */}
       <div className={`flex-shrink-0 ${isUser ? 'order-2' : 'order-1'}`}>
         {isUser ? (
-          <FaUserCircle className="w-10 h-10 text-white/50" />
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2541D6] to-[#6B21D9] shadow-[0_6px_16px_rgba(107,33,217,0.25)] flex items-center justify-center">
+            <FaUserCircle className="w-10 h-10 text-white" />
+          </div>
         ) : (
-          <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
-            <FaRobot className="w-5 h-5 text-emerald-400" />
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2541D6] to-[#6B21D9] shadow-[0_6px_16px_rgba(107,33,217,0.25)] flex items-center justify-center">
+            <img src="/AlphaLegalGPT_Logo.png" alt="AlphaLegalGPT" className="w-6 h-6 object-contain" />
           </div>
         )}
       </div>
@@ -46,33 +48,40 @@ const ChatMessage = ({ message, isStreaming }) => {
       <div className={`flex-1 min-w-0 ${isUser ? 'order-1 text-right' : 'order-2'}`}>
         {/* Error indicator */}
         {isError && (
-          <div className="flex items-center gap-2 text-red-400 mb-2">
-            <FiAlertCircle className="w-4 h-4" />
+
+          <div className="flex items-center gap-2 mb-2 text-[#5C6178] font-body">
+            <FiAlertCircle className="w-4 h-4 text-[#6B21D9]" />
             <span className="text-sm">{t('errorOccurred')}</span>
           </div>
         )}
 
         {/* Message bubble */}
         <div
-          className={`inline-block max-w-[80%] message-bubble ${
+          className={`inline-block max-w-[80%] message-bubble relative group ${
             isUser
-              ? 'bg-white/10 backdrop-blur-xl rounded-2xl rounded-br-md border border-white/10'
+              ? 'bg-white border border-[#E7E9F3] rounded-2xl rounded-br-md'
               : isError
-              ? 'bg-red-500/10 border border-red-500/30 rounded-2xl'
-              : 'bg-white/5 backdrop-blur-xl rounded-2xl rounded-bl-md border border-white/10'
-          } px-4 py-3`}
+                ? 'bg-[#F6F7FB] border border-[#E7E9F3] rounded-2xl'
+                : 'bg-white border border-[#E7E9F3] rounded-2xl rounded-bl-md'
+          } px-4 py-3 shadow-sm
+          transition-all duration-300
+          group-hover:shadow-[0_12px_32px_rgba(16,24,40,0.08)] group-hover:-translate-y-0.5
+          group-hover:border-[#0B0D1C]/10`}
         >
           {/* AI Badge */}
           {!isUser && !isError && (
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                {t('basedOnIPC')}
-              </span>
+              <div className="flex items-center gap-2 rounded-full border border-[#E7E9F3] bg-white shadow-sm px-2 py-0.5">
+                <span className="inline-flex w-1.5 h-1.5 rounded-full bg-[#10B981] animate-[pulse-dot_5s_ease-in-out_infinite]" aria-hidden="true" />
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-wide text-[#6B21D9]">
+                  {t('basedOnIPC')}
+                </span>
+              </div>
             </div>
           )}
 
           {/* Markdown Content */}
-          <div className="markdown-content text-[15px] text-white">
+          <div className="markdown-content text-[15px] text-[#0B0D1C] font-body">
             <ReactMarkdown
               components={{
                 a: ({ node, ...props }) => {
@@ -83,14 +92,14 @@ const ChatMessage = ({ message, isStreaming }) => {
                         {...props}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg font-medium transition-all my-1 no-underline border border-emerald-500/30"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-[#E7E9F3] hover:bg-[#F6F7FB] text-[#2541D6] rounded-xl font-body font-semibold transition-all my-1 no-underline shadow-sm"
                       >
                         <FiMapPinIcon className="w-4 h-4" />
                         <span>{t('getDirections')}</span>
                       </a>
                     );
                   }
-                  return <a {...props} className="text-emerald-400 underline hover:text-emerald-300" target="_blank" rel="noopener noreferrer" />;
+                  return <a {...props} className="text-[#2541D6] underline decoration-[#2541D6]/40 hover:text-[#6B21D9]" target="_blank" rel="noopener noreferrer" />;
                 }
               }}
             >
@@ -110,7 +119,7 @@ const ChatMessage = ({ message, isStreaming }) => {
             <div className="mb-2">
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors"
+                className="flex items-center gap-2 text-sm text-[#5C6178] hover:text-[#0B0D1C] transition-colors font-body"
               >
                 {isExpanded ? (
                   <FiChevronUp className="w-4 h-4" />
@@ -118,7 +127,7 @@ const ChatMessage = ({ message, isStreaming }) => {
                   <FiChevronDown className="w-4 h-4" />
                 )}
                 <span className="font-medium">{t('citations')}</span>
-                <span className="text-xs bg-white/10 px-2 py-0.5 rounded">
+                <span className="text-[10px] bg-white border border-[#E7E9F3] px-2 py-0.5 rounded font-mono text-[#6B21D9] shadow-sm">
                   {message.citations.length}
                 </span>
               </button>
@@ -133,11 +142,11 @@ const ChatMessage = ({ message, isStreaming }) => {
                   exit={{ opacity: 0, maxHeight: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="bg-white/5 backdrop-blur-xl rounded-lg p-3 space-y-2 border border-white/10">
+                  <div className="bg-[#F6F7FB] rounded-xl p-3 space-y-2 border border-[#E7E9F3] shadow-sm">
                     {message.citations.map((citation, index) => (
                       <div
                         key={index}
-                      className="text-sm text-white/70 border-l-2 border-emerald-500/50 pl-3"
+                        className="text-sm text-[#5C6178] border-l-2 border-[#2541D6]/40 pl-3 font-body"
                       >
                         {citation}
                       </div>
@@ -149,10 +158,10 @@ const ChatMessage = ({ message, isStreaming }) => {
 
             {/* Confidence Score */}
             {message.confidence !== undefined && (
-              <div className="flex items-center gap-2 mt-2 text-sm">
-                <FiCheckCircle className="w-4 h-4 text-emerald-400" />
-                <span className="text-white/70">
-                  {t('confidence')}: <span className="text-emerald-400 font-medium">{Math.round(message.confidence * 100)}%</span>
+              <div className="flex items-center gap-2 mt-2 text-sm font-body">
+                <FiCheckCircle className="w-4 h-4 text-[#2541D6]" />
+                <span className="text-[#5C6178]">
+                  {t('confidence')}: <span className="text-[#2541D6] font-medium">{Math.round(message.confidence * 100)}%</span>
                 </span>
               </div>
             )}
@@ -160,7 +169,7 @@ const ChatMessage = ({ message, isStreaming }) => {
         )}
 
         {/* Timestamp */}
-        <div className={`mt-1 text-xs text-white/50 ${isUser ? 'text-right' : ''}`}>
+        <div className={`mt-1 text-xs text-[#9AA0B4] ${isUser ? 'text-right' : ''} font-body`}>
           {formatTime(message.timestamp)}
         </div>
       </div>
@@ -169,4 +178,3 @@ const ChatMessage = ({ message, isStreaming }) => {
 };
 
 export default ChatMessage;
-

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiMoon, FiSun, FiLogOut, FiDatabase, FiTrash2, FiDownload, FiAlertCircle, FiZap, FiLink, FiGlobe, FiType, FiMessageSquare } from 'react-icons/fi';
+import { FiX, FiMoon, FiSun, FiLogOut, FiDatabase, FiTrash2, FiDownload, FiAlertCircle, FiZap, FiGlobe, FiType, FiMessageSquare } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext';
 
 const SettingsModal = ({ isOpen, onClose }) => {
   const { user, logout } = useAuth();
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   const [realtime, setRealtime] = useState(localStorage.getItem('realtime') !== 'off');
   const [language, setLanguage] = useState(localStorage.getItem('language') || 'en');
   const [textSize, setTextSize] = useState(localStorage.getItem('textSize') || 'medium');
@@ -62,7 +62,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
         onClick={onClose}
       >
         <motion.div
@@ -70,15 +70,15 @@ const SettingsModal = ({ isOpen, onClose }) => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ duration: 0.2 }}
-          className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-md max-h-[90vh] overflow-hidden shadow-2xl flex flex-col"
+          className="bg-white border border-[#E7E9F3] rounded-2xl w-full max-w-md max-h-[90vh] overflow-hidden shadow-2xl flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-            <h2 className="text-xl font-medium text-white">Settings</h2>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[#E7E9F3]">
+            <h2 className="text-xl font-display font-medium text-[#0B0D1C]">Settings</h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/70 hover:text-white"
+              className="p-2 hover:bg-[#F6F7FB] rounded-full transition-colors text-[#9AA0B4] hover:text-[#0B0D1C]"
             >
               <FiX className="w-5 h-5" />
             </button>
@@ -88,77 +88,77 @@ const SettingsModal = ({ isOpen, onClose }) => {
           <div className="p-4 space-y-2 overflow-y-auto max-h-[calc(90vh-140px)]">
             
             <div className="px-2 pb-4 pt-2">
-               <div className="flex items-center gap-3">
-                 <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xl font-bold">
-                   {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+              <div className="flex items-center gap-3">
+                 <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-[#2541D6] to-[#6B21D9] shadow-[0_6px_16px_rgba(107,33,217,0.25)] flex items-center justify-center">
+                    <img src="/AlphaLegalGPT_Logo.png" alt="AlphaLegalGPT" className="w-8 h-8 object-contain" />
                  </div>
                  <div className="flex flex-col">
-                    <span className="text-base font-medium text-white capitalize">{user?.name || 'Alpha Legal User'}</span>
-                    <span className="text-sm text-white/70">{user?.email || ''}</span>
+                    <span className="text-base font-display font-medium text-[#0B0D1C] capitalize">{user?.name || 'Alpha Legal User'}</span>
+                    <span className="text-sm text-[#5C6178] font-body">{user?.email || ''}</span>
                  </div>
                </div>
             </div>
 
-            <hr className="border-white/10 my-2" />
+            <hr className="border-[#E7E9F3] my-2" />
 
             {/* Menu Items */}
             <div className="flex flex-col gap-1 pt-2">
               <button 
                 onClick={handleThemeToggle}
-                className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-white/5 rounded-lg transition-colors"
-               >
-                 <div className="flex items-center gap-4 text-white">
-                    {theme === 'dark' ? <FiMoon className="w-5 h-5" /> : <FiSun className="w-5 h-5" />}
-                    <span className="text-[15px]">Dark theme</span>
-                 </div>
-                 <div className={`w-10 h-5 rounded-full relative transition-colors ${theme === 'dark' ? 'bg-emerald-500' : 'bg-white/20'}`}>
-                   <div className={`absolute top-[2px] w-4 h-4 bg-white rounded-full transition-all ${theme === 'dark' ? 'left-[22px]' : 'left-[2px]'}`}></div>
-                 </div>
-               </button>
+                className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-[#F6F7FB] rounded-xl transition-colors font-body"
+             >
+               <div className="flex items-center gap-4 text-[#0B0D1C]">
+                  {theme === 'dark' ? <FiMoon className="w-5 h-5" /> : <FiSun className="w-5 h-5" />}
+                  <span className="text-[15px]">Dark theme</span>
+               </div>
+               <div className={`w-10 h-5 rounded-full relative transition-colors ${theme === 'dark' ? 'bg-gradient-to-r from-[#2541D6] to-[#6B21D9]' : 'bg-[#F6F7FB]'}`}>
+                 <div className={`absolute top-[2px] w-4 h-4 bg-white rounded-full transition-all ${theme === 'dark' ? 'left-[22px]' : 'left-[2px]'}`}></div>
+               </div>
+             </button>
 
               <button 
                 onClick={handleRealtimeToggle}
-                className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-white/5 rounded-lg transition-colors"
-               >
-                 <div className="flex items-center gap-4 text-white">
-                    <FiZap className="w-5 h-5" />
-                    <span className="text-[15px]">Real-time responses</span>
-                 </div>
-                 <div className={`w-10 h-5 rounded-full relative transition-colors ${realtime ? 'bg-emerald-500' : 'bg-white/20'}`}>
-                   <div className={`absolute top-[2px] w-4 h-4 bg-white rounded-full transition-all ${realtime ? 'left-[22px]' : 'left-[2px]'}`}></div>
-                 </div>
-               </button>
+                className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-[#F6F7FB] rounded-xl transition-colors font-body"
+             >
+               <div className="flex items-center gap-4 text-[#0B0D1C]">
+                  <FiZap className="w-5 h-5" />
+                  <span className="text-[15px]">Real-time responses</span>
+               </div>
+               <div className={`w-10 h-5 rounded-full relative transition-colors ${realtime ? 'bg-gradient-to-r from-[#2541D6] to-[#6B21D9]' : 'bg-[#F6F7FB]'}`}>
+                 <div className={`absolute top-[2px] w-4 h-4 bg-white rounded-full transition-all ${realtime ? 'left-[22px]' : 'left-[2px]'}`}></div>
+               </div>
+             </button>
 
               <button 
                 onClick={handleLanguageToggle}
-                className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-white/5 rounded-lg transition-colors"
-               >
-                 <div className="flex items-center gap-4 text-white">
-                    <FiGlobe className="w-5 h-5" />
-                    <span className="text-[15px]">Primary Language</span>
-                 </div>
-                 <div className="text-xs font-semibold px-2 py-1 bg-white/10 rounded-md text-white/70">
-                   {language === 'en' ? 'English' : 'Tamil'}
-                 </div>
-               </button>
+                className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-[#F6F7FB] rounded-xl transition-colors font-body"
+             >
+               <div className="flex items-center gap-4 text-[#0B0D1C]">
+                  <FiGlobe className="w-5 h-5" />
+                  <span className="text-[15px]">Primary Language</span>
+               </div>
+               <div className="text-xs font-mono font-semibold px-2 py-1 bg-[#F6F7FB] rounded-md text-[#5C6178]">
+                 {language === 'en' ? 'English' : 'Tamil'}
+               </div>
+             </button>
 
               <button 
                 onClick={handleTextSizeCycle}
-                className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-white/5 rounded-lg transition-colors"
-               >
-                 <div className="flex items-center gap-4 text-white">
-                    <FiType className="w-5 h-5" />
-                    <span className="text-[15px]">Reading Text Size</span>
-                 </div>
-                 <div className="text-xs font-semibold px-2 py-1 bg-white/10 rounded-md text-white/70 capitalize">
-                   {textSize}
-                 </div>
-               </button>
+                className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-[#F6F7FB] rounded-xl transition-colors font-body"
+             >
+               <div className="flex items-center gap-4 text-[#0B0D1C]">
+                  <FiType className="w-5 h-5" />
+                  <span className="text-[15px]">Reading Text Size</span>
+               </div>
+               <div className="text-xs font-mono font-semibold px-2 py-1 bg-[#F6F7FB] rounded-md text-[#5C6178] capitalize">
+                 {textSize}
+               </div>
+             </button>
 
               <button 
                  onClick={() => alert("Chat history export feature coming soon!")}
-                 className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-white/5 rounded-lg transition-colors">
-                 <div className="flex items-center gap-4 text-white">
+                 className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-[#F6F7FB] rounded-xl transition-colors font-body">
+                 <div className="flex items-center gap-4 text-[#0B0D1C]">
                     <FiDownload className="w-5 h-5" />
                     <span className="text-[15px]">Export current chat</span>
                  </div>
@@ -173,8 +173,8 @@ const SettingsModal = ({ isOpen, onClose }) => {
                      window.location.reload();
                    }
                  }}
-                 className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-red-500/10 rounded-lg transition-colors group">
-                 <div className="flex items-center gap-4 text-white group-hover:text-red-400 transition-colors">
+                 className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-red-500/10 rounded-xl transition-colors group font-body">
+                 <div className="flex items-center gap-4 text-[#0B0D1C] group-hover:text-red-500 transition-colors">
                     <FiTrash2 className="w-5 h-5" />
                     <span className="text-[15px]">Clear all chat history</span>
                  </div>
@@ -182,8 +182,8 @@ const SettingsModal = ({ isOpen, onClose }) => {
 
               <button 
                  onClick={() => alert("AI LegalGPT is an AI assistant, not a substitute for professional legal advice.")}
-                 className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-white/5 rounded-lg transition-colors">
-                 <div className="flex items-center gap-4 text-white">
+                 className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-[#F6F7FB] rounded-xl transition-colors font-body">
+                 <div className="flex items-center gap-4 text-[#0B0D1C]">
                     <FiAlertCircle className="w-5 h-5" />
                     <span className="text-[15px]">Legal Disclaimer</span>
                  </div>
@@ -191,15 +191,15 @@ const SettingsModal = ({ isOpen, onClose }) => {
 
               <button 
                  onClick={() => window.open("mailto:support@alphalegal.com", "_blank")}
-                 className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-white/5 rounded-lg transition-colors">
-                 <div className="flex items-center gap-4 text-white">
+                 className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-[#F6F7FB] rounded-xl transition-colors font-body">
+                 <div className="flex items-center gap-4 text-[#0B0D1C]">
                     <FiMessageSquare className="w-5 h-5" />
                     <span className="text-[15px]">Contact Support & Feedback</span>
                  </div>
                </button>
 
-              <button className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-white/5 rounded-lg transition-colors">
-                 <div className="flex items-center gap-4 text-white">
+              <button className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-[#F6F7FB] rounded-xl transition-colors font-body">
+                 <div className="flex items-center gap-4 text-[#0B0D1C]">
                     <FiDatabase className="w-5 h-5" />
                     <span className="text-[15px]">Your data in AlphaLegal</span>
                  </div>
@@ -207,13 +207,13 @@ const SettingsModal = ({ isOpen, onClose }) => {
             </div>
           </div>
 
-          <hr className="border-white/10" />
+          <hr className="border-[#E7E9F3]" />
 
           {/* Footer - Logout Activity */}
-          <div className="flex items-center justify-end px-6 py-4 bg-transparent border-t border-white/10">
+          <div className="flex items-center justify-end px-6 py-4 bg-transparent border-t border-[#E7E9F3]">
              <button 
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-5 py-2 text-sm text-white hover:bg-white/5 rounded-full transition-colors border border-white/10"
+                className="flex items-center gap-2 px-5 py-2 text-sm text-[#0B0D1C] hover:bg-[#F6F7FB] rounded-full transition-colors border border-[#E7E9F3] font-body"
              >
                 <FiLogOut className="w-4 h-4" />
                 Sign out

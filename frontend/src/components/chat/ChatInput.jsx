@@ -10,7 +10,16 @@ import {
 } from 'react-icons/fi';
 import { uploadDocument } from '../../services/api';
 
-const ChatInput = ({ value: message, onChange: setMessage, onSendMessage, isLoading, disabled, isLocationEnabled, isLocationLoading, onLocationToggle, hasGeneratedResponse }) => {
+const ChatInput = ({
+  value: message,
+  onChange: setMessage,
+  onSendMessage,
+  isLoading,
+  disabled,
+  isLocationEnabled,
+  isLocationLoading,
+  onLocationToggle
+}) => {
   const { t, i18n } = useTranslation();
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -136,13 +145,13 @@ const ChatInput = ({ value: message, onChange: setMessage, onSendMessage, isLoad
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: 0.2 }}
-      className="sticky bottom-0 bg-slate-900/80 backdrop-blur-xl border-t border-white/10 p-4"
+      className="sticky bottom-0 bg-white border-t border-[#E7E9F3] p-4"
     >
       <div className="max-w-[900px] mx-auto">
         
         {/* Quick Templates Bar */}
         <div className="flex flex-wrap items-center gap-2 mb-3 px-1 overflow-x-auto no-scrollbar">
-          <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest mr-1">
+          <span className="text-[10px] font-mono font-semibold text-[#9AA0B4] uppercase tracking-widest mr-1">
             {t('quickDraft') || 'Quick Draft'}:
           </span>
           {[
@@ -160,7 +169,7 @@ const ChatInput = ({ value: message, onChange: setMessage, onSendMessage, isLoad
               whileTap={{ scale: 0.95 }}
               onClick={() => handleTemplateClick(item.id)}
               disabled={disabled}
-              className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-xs font-medium text-white flex items-center gap-2 transition-all whitespace-nowrap disabled:opacity-50"
+              className="px-3 py-1.5 bg-white border border-[#E7E9F3] rounded-full text-xs font-body font-medium text-[#5C6178] flex items-center gap-2 transition-all whitespace-nowrap disabled:opacity-50 hover:bg-[#F6F7FB] hover:text-[#0B0D1C]"
             >
               <span>{item.icon}</span>
               {item.label}
@@ -170,7 +179,7 @@ const ChatInput = ({ value: message, onChange: setMessage, onSendMessage, isLoad
 
         <form
           onSubmit={handleSubmit}
-          className="relative flex items-end gap-2 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 focus-within:border-emerald-500/50 transition-colors"
+          className="relative flex items-end gap-2 bg-white rounded-2xl border border-[#E7E9F3] shadow-sm focus-within:border-[#2541D6]/50 transition-all"
         >
           {/* Textarea */}
           <div className="flex-1 relative">
@@ -182,7 +191,7 @@ const ChatInput = ({ value: message, onChange: setMessage, onSendMessage, isLoad
               placeholder={t('typeMessage')}
               disabled={disabled}
               rows={1}
-              className="w-full bg-transparent px-4 py-3 text-[15px] text-white placeholder:text-white/50 resize-none disabled:opacity-50"
+              className="w-full bg-transparent px-4 py-3 text-[15px] text-[#0B0D1C] placeholder:text-[#9AA0B4] resize-none disabled:opacity-50 font-body"
               style={{ minHeight: '24px', maxHeight: '200px' }}
             />
             
@@ -191,9 +200,9 @@ const ChatInput = ({ value: message, onChange: setMessage, onSendMessage, isLoad
               <button
                 type="button"
                 onClick={() => setMessage('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-[#F6F7FB] rounded-full transition-colors"
               >
-                <FiX className="w-4 h-4 text-white/70" />
+                <FiX className="w-4 h-4 text-[#9AA0B4]" />
               </button>
             )}
           </div>
@@ -216,23 +225,21 @@ const ChatInput = ({ value: message, onChange: setMessage, onSendMessage, isLoad
                 type="button"
                 onClick={onLocationToggle}
                 disabled={disabled || isLocationLoading}
-                className={`p-2.5 rounded-xl transition-all duration-500 ${
-                  isLocationEnabled 
-                    ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' 
-                    : hasGeneratedResponse 
-                      ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/40 animate-pulse shadow-[0_0_15px_rgba(16,163,127,0.3)]'
-                      : 'text-white/70 hover:text-white hover:bg-white/5'
+                className={`p-2.5 rounded-xl transition-all duration-300 ${
+                  isLocationEnabled
+                    ? 'text-[#10B981] bg-white border border-[#10B981]/30'
+                    : 'text-[#9AA0B4] hover:text-[#0B0D1C] hover:bg-[#F6F7FB]'
                 } disabled:opacity-40 disabled:cursor-not-allowed`}
                 title={t('locationAccess')}
               >
                 {isLocationLoading ? (
-                  <div className="w-5 h-5 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-[#10B981]/30 border-t-[#10B981] rounded-full animate-spin" />
                 ) : (
                   <FiMapPinIcon className="w-5 h-5" />
                 )}
               </button>
               {isLocationEnabled && !isLocationLoading && (
-                <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-tighter mt-0.5 animate-pulse">
+ <span className="text-[9px] font-mono font-semibold text-[#10B981] uppercase tracking-tight mt-0.5 animate-pulse">
                   {t('locationOn')}
                 </span>
               )}
@@ -246,8 +253,8 @@ const ChatInput = ({ value: message, onChange: setMessage, onSendMessage, isLoad
                 disabled={disabled}
                 className={`p-2.5 rounded-xl transition-all duration-300 ${
                   isRecording 
-                    ? 'text-white bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] scale-110' 
-                    : 'text-white/70 hover:text-white hover:bg-white/5'
+                    ? 'text-white bg-red-500 shadow-lg scale-110'
+                    : 'text-[#9AA0B4] hover:text-[#0B0D1C] hover:bg-[#F6F7FB]'
                 } disabled:opacity-40 disabled:cursor-not-allowed`}
                 title={t('voiceInput')}
               >
@@ -258,7 +265,7 @@ const ChatInput = ({ value: message, onChange: setMessage, onSendMessage, isLoad
                 )}
               </button>
               {isRecording && (
-                <span className="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-red-500 text-white text-[10px] font-bold rounded-md animate-pulse whitespace-nowrap">
+                <span className="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-red-500 text-white text-[10px] font-mono font-semibold rounded-md animate-pulse whitespace-nowrap">
                   Listening...
                 </span>
               )}
@@ -269,8 +276,8 @@ const ChatInput = ({ value: message, onChange: setMessage, onSendMessage, isLoad
               type="button"
               onClick={handleDocumentClick}
               disabled={disabled || isUploading}
-              className={`p-2.5 rounded-xl transition-colors ${
-                isUploading ? 'text-emerald-400 animate-pulse' : 'text-white/70 hover:text-white hover:bg-white/5'
+              className={`p-2.5 rounded-xl transition-colors font-body ${
+isUploading ? 'text-[#2541D6] animate-pulse' : 'text-[#9AA0B4] hover:text-[#0B0D1C] hover:bg-[#F6F7FB]'
               } disabled:opacity-40 disabled:cursor-not-allowed`}
               title={t('pdfUpload')}
             >
@@ -283,10 +290,10 @@ const ChatInput = ({ value: message, onChange: setMessage, onSendMessage, isLoad
               disabled={disabled || !message.trim()}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className={`p-2.5 rounded-xl transition-colors ${
-                message.trim() && !disabled
-                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                  : 'bg-white/5 text-white/70'
+              className={`p-2.5 rounded-xl transition-all duration-300 font-body ${
+message.trim() && !disabled
+                  ? 'bg-gradient-to-r from-[#2541D6] to-[#6B21D9] text-white shadow-[0_8px_28px_rgba(37,65,214,0.3)]'
+                  : 'bg-[#F6F7FB] text-[#9AA0B4] shadow-sm'
               } disabled:cursor-not-allowed`}
             >
               {isLoading ? (
@@ -299,7 +306,7 @@ const ChatInput = ({ value: message, onChange: setMessage, onSendMessage, isLoad
         </form>
 
         {/* Disclaimer */}
-        <p className="text-center text-xs text-white/50 mt-2">
+        <p className="text-center text-xs text-[#9AA0B4] mt-2 font-body">
           {t('legalDisclaimer')}
         </p>
       </div>

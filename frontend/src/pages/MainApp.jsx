@@ -55,7 +55,7 @@ function MainApp() {
         const sections = [...new Set(matches.map(m => {
           const num = m[1];
           const type = m[0].toUpperCase().includes('CRPC') ? 'CrPC' : 
-                       m[0].toUpperCase().includes('BNSS') ? 'BNSS' : 'IPC';
+                      m[0].toUpperCase().includes('BNSS') ? 'BNSS' : 'IPC';
           return `${type} ${num}`;
         }))];
 
@@ -133,7 +133,48 @@ function MainApp() {
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-emerald-900/90 via-slate-900 to-teal-900/90 overflow-hidden">
+    <div className="flex h-screen bg-[#FCFCFF] relative">
+      {/* Aurora mesh background - shared with landing page */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage:
+              'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27120%27 height=%27120%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%27.8%27 numOctaves=%273%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27120%27 height=%27120%27 filter=%27url(%23n)%27 opacity=%270.45%27/%3E%3C/svg%3E")',
+          }}
+        />
+
+        <motion.div
+          animate={{ x: [0, 20, 0], y: [0, -10, 0] }}
+          transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -top-60 -left-60 w-[52rem] h-[52rem] rounded-full"
+          style={{
+            background: 'radial-gradient(circle at center, rgba(62,99,255,0.35) 0%, rgba(62,99,255,0) 60%)',
+            filter: 'blur(130px)',
+          }}
+        />
+
+        <motion.div
+          animate={{ x: [0, -16, 0], y: [0, 14, 0] }}
+          transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+          className="absolute -bottom-56 -right-64 w-[58rem] h-[58rem] rounded-full"
+          style={{
+            background: 'radial-gradient(circle at center, rgba(139,63,232,0.25) 0%, rgba(139,63,232,0) 60%)',
+            filter: 'blur(140px)',
+          }}
+        />
+
+        <motion.div
+          animate={{ x: [0, 14, 0], y: [0, 10, 0] }}
+          transition={{ duration: 17, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+          className="absolute top-28 right-[-20rem] w-[44rem] h-[44rem] rounded-full"
+          style={{
+            background: 'radial-gradient(circle at center, rgba(226,63,160,0.2) 0%, rgba(226,63,160,0) 60%)',
+            filter: 'blur(150px)',
+          }}
+        />
+      </div>
+
       {/* Left Sidebar */}
       <Sidebar
         chats={chats}
@@ -156,15 +197,15 @@ function MainApp() {
         <motion.header
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/5 backdrop-blur-xl sticky top-0 z-40"
+          className="flex items-center justify-between px-6 py-4 border-b border-[#E7E9F3] bg-white/80 backdrop-blur-xl sticky top-0 z-40"
         >
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-display font-semibold text-[#0B0D1C]">
               {chats.find(c => c.id === currentChatId)?.title || t('appName')}
             </h2>
             {isConnected && (
-              <span className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full">
-                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+              <span className="flex items-center gap-1.5 text-xs text-[#10B981] bg-white border border-[#E7E9F3] px-2 py-1 rounded-full font-mono font-medium">
+                <span className="w-2 h-2 bg-[#10B981] rounded-full animate-pulse" />
                 {t('connected')}
               </span>
             )}
@@ -172,8 +213,8 @@ function MainApp() {
 
           {/* Connection status */}
           {!isCheckingHealth && !isConnected && (
-            <div className="flex items-center gap-2 text-xs text-red-400">
-              <span className="w-2 h-2 bg-red-400 rounded-full" />
+            <div className="flex items-center gap-2 text-xs text-red-500 font-body">
+              <span className="w-2 h-2 bg-red-500 rounded-full" />
               {t('disconnected')}
             </div>
           )}
@@ -226,7 +267,7 @@ function MainApp() {
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 50 }}
-          className="fixed bottom-24 right-6 bg-red-500/20 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm max-w-sm backdrop-blur-xl"
+          className="fixed bottom-24 right-6 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-600 text-sm max-w-sm"
         >
           {error}
         </motion.div>
@@ -246,11 +287,11 @@ function MainApp() {
           whileHover={{ scale: 1.1, x: 5 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => setIsLawSidebarOpen(true)}
-          className="fixed left-0 top-[30%] -translate-y-1/2 z-[90] bg-emerald-500 hover:bg-emerald-600 text-white p-3 rounded-r-2xl shadow-lg border-y border-r border-white/20 backdrop-blur-sm transition-colors group"
+          className="fixed left-0 top-[30%] -translate-y-1/2 z-[90] bg-gradient-to-r from-[#2541D6] to-[#6B21D9] hover:from-[#1e3bb8] hover:to-[#5B1ED6] text-white p-3 rounded-r-xl shadow-lg transition-all group"
           title={t('openLaws')}
         >
           <FiBook className="w-5 h-5" />
-          <span className="absolute left-full ml-2 px-2 py-1 bg-slate-900 border border-white/20 rounded text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+          <span className="absolute left-full ml-2 px-2 py-1 bg-white border border-[#E7E9F3] rounded text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity font-body">
             {t('openLaws')}
           </span>
         </motion.button>

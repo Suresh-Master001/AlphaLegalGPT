@@ -1,22 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { FiCpu } from 'react-icons/fi';
 import ChatMessage from '../components/chat/ChatMessage';
 
 const TypingIndicator = () => (
   <div className="flex gap-4 mb-6">
     <div className="flex-shrink-0">
-      <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
-        <FiCpu className="w-5 h-5 text-emerald-400" />
+      <div className="w-10 h-10 rounded-full bg-white border border-[#E7E9F3] shadow-sm flex items-center justify-center">
+        <img src="/AlphaLegalGPT_Logo.png" alt="AlphaLegalGPT" className="w-5 h-5 object-contain" />
       </div>
     </div>
     <div className="flex items-center">
-      <div className="bg-white/5 backdrop-blur-xl rounded-2xl rounded-bl-md px-4 py-3 border border-white/10">
+      <div className="bg-[#F6F7FB] rounded-2xl rounded-bl-md px-4 py-3 border border-[#E7E9F3]">
         <div className="flex gap-1">
-          <div className="w-2 h-2 bg-white/50 rounded-full typing-dot" />
-          <div className="w-2 h-2 bg-white/50 rounded-full typing-dot" />
-          <div className="w-2 h-2 bg-white/50 rounded-full typing-dot" />
+          <div className="w-2 h-2 bg-[#9AA0B4]/60 rounded-full typing-dot" />
+          <div className="w-2 h-2 bg-[#9AA0B4]/60 rounded-full typing-dot" />
+          <div className="w-2 h-2 bg-[#9AA0B4]/60 rounded-full typing-dot" />
         </div>
       </div>
     </div>
@@ -43,24 +42,24 @@ const WelcomeScreen = ({ onExampleClick }) => {
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4"
     >
-      {/* Logo */}
-      <div className="w-20 h-20 rounded-2xl bg-emerald-500/20 flex items-center justify-center mb-6">
-        <FiCpu className="w-10 h-10 text-emerald-400" />
+      {/* Logo with gradient chip */}
+      <div className="w-16 h-16 mb-6">
+        <img src="/AlphaLegalGPT_Logo.png" alt="AlphaLegalGPT Logo" />
       </div>
 
       {/* Title */}
-      <h2 className="text-3xl font-bold text-white mb-3">
+      <h2 className="text-3xl font-display font-bold bg-gradient-to-r from-[#2541D6] via-[#6B21D9] to-[#8B5CF6] bg-clip-text text-transparent mb-3">
         {t('welcomeTitle')}
       </h2>
 
       {/* Description */}
-      <p className="text-white/70 text-lg max-w-lg mb-8">
+      <p className="text-[#5C6178] text-lg max-w-lg mb-8 font-body">
         {t('welcomeMessage')}
       </p>
 
       {/* Example Questions */}
       <div className="max-w-lg w-full">
-        <p className="text-sm font-medium text-white/50 mb-4">
+        <p className="text-sm font-body font-medium text-[#9AA0B4] mb-4">
           {t('exampleQuestionsText')}
         </p>
         <div className="grid gap-3">
@@ -70,9 +69,9 @@ const WelcomeScreen = ({ onExampleClick }) => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => onExampleClick(example)}
-              className="text-left p-4 bg-white/5 hover:bg-emerald-500/20 text-white group rounded-xl border border-white/10 hover:border-emerald-500/50 transition-all duration-200"
+              className="text-left p-4 bg-white border border-[#E7E9F3] hover:bg-[#F6F7FB] text-[#0B0D1C] group rounded-xl shadow-sm hover:shadow-md transition-all duration-200"
             >
-              <span className="text-white group-hover:text-emerald-400 transition-colors">
+              <span className="text-[#0B0D1C] group-hover:text-[#2541D6] transition-colors font-body">
                 {example}
               </span>
             </motion.button>
