@@ -96,9 +96,9 @@ const Signup = () => {
             transition={{ duration: 0.5, ease: 'easeOut' }}
             className="inline-flex items-center justify-center mb-4"
           >
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#2541D6] to-[#6B21D9] shadow-[0_6px_16px_rgba(107,33,217,0.25)] flex items-center justify-center">
-              <FiUser className="w-6 h-6 text-white" />
-            </div>
+            <div className="w-16 h-16">
+        <img src="/AlphaLegalGPT_Logo.png" alt="AlphaLegalGPT Logo" />
+      </div>
           </motion.div>
           <motion.h2
             initial={{ y: 10, opacity: 0 }}
