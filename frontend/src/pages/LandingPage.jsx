@@ -427,7 +427,7 @@ const LandingPage = ({ onGetStarted }) => {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 py-10 px-4 md:px-12 border-t border-[#E7E9F3]">
+      <footer className="relative z-10 py-10 px-4 md:px-12 border-t bg-white border-[#E7E9F3]">
         <div className="max-w-6xl mx-auto flex flex-col gap-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <Link to="/" className="flex items-center gap-3 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6B21D9] focus-visible:ring-offset-2">
