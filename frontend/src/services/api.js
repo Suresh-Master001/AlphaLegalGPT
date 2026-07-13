@@ -65,7 +65,9 @@ export const initializeSocket = (onStatusChange = null) => {
   
   if (!socket) {
     socket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'],
+      // Force socket.io to try polling first. Some hosting/CDN/proxy setups
+      // break websocket upgrades before the server finishes booting.
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
