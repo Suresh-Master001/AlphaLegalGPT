@@ -57,7 +57,7 @@ export const initializeSocket = (onStatusChange = null) => {
   }
 
   socket = io(SOCKET_URL, {
-    transports: ['polling', 'websocket'],
+    transports: ['polling'], // Use polling only for better proxy compatibility
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionAttempts: 10,
