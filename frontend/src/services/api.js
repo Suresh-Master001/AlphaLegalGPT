@@ -65,13 +65,19 @@ export const initializeSocket = (onStatusChange = null) => {
   
   if (!socket) {
     socket = io(SOCKET_URL, {
-      // Force socket.io to try polling first. Some hosting/CDN/proxy setups
-      // break websocket upgrades before the server finishes booting.
+      // Be resilient on platforms where websocket upgrade is flaky.
+      // Start with polling, then allow websocket fallback.
       transports: ['polling', 'websocket'],
+
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-      timeout: 10000,
+      reconnectionAttempts: 10,
+
+      // Increase timeout a bit to avoid early failures while the server boots.
+      timeout: 20000,
+
+      // Ensure cookies are sent when using auth behind same-site setups.
+      withCredentials: true,
     });
 
     socket.on('connect', () => {
