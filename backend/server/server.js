@@ -44,6 +44,26 @@ const io = new Server(httpServer, {
   path: '/socket.io',
 });
 
+// Socket.IO Engine error handling for better debugging
+io.engine.on("connection_error", (err) => {
+  console.error('🔴 Socket.IO Engine Error:', {
+    code: err.code,
+    message: err.message,
+    context: err.context
+  });
+});
+
+// Socket.IO connection middleware
+io.use((socket, next) => {
+  try {
+    // Allow connections without immediate auth - we'll verify token in handlers
+    next();
+  } catch (err) {
+    console.error('Socket.IO middleware error:', err);
+    next(new Error('Authentication error'));
+  }
+});
+
 // Middleware
 app.use(helmet());
 app.use(compression());
@@ -119,7 +139,8 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    service: 'AI LegalGPT Assistant (Gemini)'
+    service: 'AI LegalGPT Assistant (Gemini)',
+    socketIO: 'enabled'
   });
 });
 
@@ -204,7 +225,7 @@ const initializeApp = async () => {
   ║  Frontend: ${process.env.FRONTEND_URL}                ║
   ║  LLM:     Gemini                                  ║
   ║  WebSocket: Enabled                               ║
-  ║  Database: MongoDB                 ║
+  ║  Database: MongoDB                   ║
   ╚═══════════════════════════════════════════════════╝
       `);
     });

@@ -56,8 +56,11 @@ export const initializeSocket = (onStatusChange = null) => {
     return socket;
   }
 
+  console.log('🔌 Initializing socket connection to:', SOCKET_URL);
+  console.log('🔌 Socket path:', '/socket.io');
+
   socket = io(SOCKET_URL, {
-    transports: ['polling'], // Use polling only for better proxy compatibility
+    transports: ['websocket', 'polling'],
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionAttempts: 10,
@@ -68,6 +71,7 @@ export const initializeSocket = (onStatusChange = null) => {
 
   socket.on('connect', () => {
     console.log('✅ Socket connected:', socket.id);
+    console.log('✅ Socket transport:', socket.io.engine.transport.name);
     connectionFailed = false;
     connectionAttempted = true;
     if (connectionStatusCallback) {
@@ -84,17 +88,36 @@ export const initializeSocket = (onStatusChange = null) => {
 
   socket.on('connect_error', (error) => {
     console.error('🔴 Socket connection error:', error.message);
-    console.error('🔴 Socket connection error details:', {
+    console.error('🔴 Full error details:', {
       message: error.message,
       type: error.type,
       description: error.description,
-      context: SOCKET_URL
+      context: error.context,
+      url: SOCKET_URL
     });
+    
+    // Check for specific error types
+    if (error.message === 'server error') {
+      console.error('🔴 "server error" typically indicates:');
+      console.error('   - Socket.IO handshake failed');
+      console.error('   - Authentication middleware rejected connection');
+      console.error('   - Backend threw an exception during connection');
+      console.error('   - CORS misconfiguration');
+    }
+    
     connectionFailed = true;
     connectionAttempted = true;
     if (connectionStatusCallback) {
       connectionStatusCallback(false);
     }
+  });
+
+  socket.io.engine.on("connection_error", (err) => {
+    console.error('🔴 Socket.IO Engine connection_error:', {
+      code: err.code,
+      message: err.message,
+      context: err.context
+    });
   });
 
   socket.on('error', (error) => {
