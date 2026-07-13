@@ -13,14 +13,19 @@ const SOCKET_URL = (() => {
   // If the frontend is deployed separately from the backend, default socket host to the same host
   // that serves the REST API (VITE_API_URL). This avoids hardcoding an incorrect production domain.
   const apiRaw = import.meta.env.VITE_API_URL;
-  if (apiRaw) {
+  if (apiRaw && !apiRaw.startsWith('/')) {
     const apiNoSlash = apiRaw.replace(/\/$/, '');
     const apiHost = apiNoSlash.replace(/\/api$/, '');
     return apiHost;
   }
-  // Dev fallback: current origin
+  // Dev fallback: current origin (use the page's origin for local/dev)
   return window.location.origin;
 })();
+
+// Debug logging (can be removed in production)
+console.log('[Socket Config] SOCKET_URL:', SOCKET_URL);
+console.log('[Socket Config] VITE_API_URL:', import.meta.env.VITE_API_URL);
+console.log('[Socket Config] VITE_SOCKET_URL:', import.meta.env.VITE_SOCKET_URL);
 
 const getStoredToken = () => {
   return localStorage.getItem('authToken') || 
