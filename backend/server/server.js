@@ -154,85 +154,75 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal Server Error', details: err.message });
 });
 
-// Initialize application
+// Initialize application - start server even without MongoDB
 const initializeApp = async () => {
+  let dbConnected = false;
+  
+  // MongoDB connection - don't block server startup
   try {
-    // Connect to MongoDB
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/alphalegalgpt';
     
-    // Validate MongoDB URI format
     const isValidMongoUri = mongoUri.startsWith('mongodb://') || 
                             mongoUri.startsWith('mongodb+srv://') || 
                             mongoUri.startsWith('mongodb+');
     
     if (!isValidMongoUri || mongoUri.length < 10) {
-      console.error(`❌ Invalid MONGODB_URI: "${mongoUri}"`);
-      console.log('ℹ️  Expected format: mongodb://localhost:27017/dbname or mongodb+srv://...');
-      console.log('ℹ️  Falling back to local MongoDB for development');
-      
-      // Only use localhost fallback in development
-      if (process.env.NODE_ENV !== 'production') {
-        await mongoose.connect('mongodb://localhost:27017/alphalegalgpt');
-      } else {
-        throw new Error('MONGODB_URI is not configured correctly for production');
-      }
+      console.error(`⚠️ Invalid MONGODB_URI: "${mongoUri}" - running without database`);
     } else {
       try {
         await mongoose.connect(mongoUri);
+        dbConnected = true;
+        console.log('✅ Connected to MongoDB');
       } catch (error) {
-        if (error.name === 'MongooseServerSelectionError' || error.code === 'ENOTFOUND') {
-          console.error('❌ MongoDB Connection Failed:');
-          console.error('   - Check if MongoDB Atlas IP whitelist includes Render.com IPs');
-          console.error('   - Verify MONGODB_URI is correct in environment variables');
-          console.error('   - Ensure database user has correct permissions');
-          console.error('   - MongoDB Atlas: https://cloud.mongodb.com/');
-          throw new Error(`MongoDB connection failed: ${error.message}`);
-        }
-        throw error;
+        console.error('⚠️ MongoDB Connection Failed (continuing without DB):', error.message);
       }
     }
-    console.log('✅ Connected to MongoDB');
-
-    // Seed default admin user if not exists
-    const defaultEmail = 'admin@alphalegal.com';
-    const existingAdmin = await User.findOne({ email: defaultEmail });
-    if (!existingAdmin) {
-      const bcrypt = (await import('bcryptjs')).default;
-      const hashedPassword = await bcrypt.hash('password123', 10);
-      await User.create({
-        email: defaultEmail,
-        name: 'Admin User',
-        password: hashedPassword,
-        isVerified: true
-      });
-      console.log('✅ Default admin user created: admin@alphalegal.com / password123');
-    } else {
-      console.log('✅ Default user already exists');
-    }
-
-    console.log('Starting AI LegalGPT Backend (Gemini)...');
-    console.log('Database: MongoDB');
-
-    // Start server
-    const PORT = process.env.PORT || 3001;
-    httpServer.listen(PORT, () => {
-      console.log(`
-  ╔═══════════════════════════════════════════════════╗
-  ║           AI LegalGPT Backend Running             ║
-  ╠═══════════════════════════════════════════════════╣
-  ║  Server: http://localhost:${PORT}                    ║
-  ║  API:     http://localhost:${PORT}/api               ║
-  ║  Frontend: ${process.env.FRONTEND_URL}                ║
-  ║  LLM:     Gemini                                  ║
-  ║  WebSocket: Enabled                               ║
-  ║  Database: MongoDB                   ║
-  ╚═══════════════════════════════════════════════════╝
-      `);
-    });
-  } catch (error) {
-    console.error('Failed to initialize application:', error);
-    process.exit(1);
+  } catch (dbError) {
+    console.error('⚠️ Database init error (continuing without DB):', dbError.message);
   }
+
+  // Seed default admin user if exists and DB connected
+  if (dbConnected) {
+    try {
+      const defaultEmail = 'admin@alphalegal.com';
+      const existingAdmin = await User.findOne({ email: defaultEmail });
+      if (!existingAdmin) {
+        const bcrypt = (await import('bcryptjs')).default;
+        const hashedPassword = await bcrypt.hash('password123', 10);
+        await User.create({
+          email: defaultEmail,
+          name: 'Admin User',
+          password: hashedPassword,
+          isVerified: true
+        });
+        console.log('✅ Default admin user created: admin@alphalegal.com / password123');
+      } else {
+        console.log('✅ Default user already exists');
+      }
+    } catch (seedError) {
+      console.error('⚠️ User seed error:', seedError.message);
+    }
+  }
+
+  // Start server regardless of DB status
+  console.log('Starting AI LegalGPT Backend (Gemini)...');
+  console.log(`Database: ${dbConnected ? 'MongoDB' : 'Unavailable (using local search only)'}`);
+
+  const PORT = process.env.PORT || 3001;
+  httpServer.listen(PORT, () => {
+    console.log(`
+╔═══════════════════════════════════════════════════╗
+║           AI LegalGPT Backend Running             ║
+╠═══════════════════════════════════════════════════╣
+║  Server: http://localhost:${PORT}                    ║
+║  API:     http://localhost:${PORT}/api               ║
+║  Frontend: ${process.env.FRONTEND_URL}                ║
+║  LLM:     Gemini                                  ║
+║  WebSocket: Enabled                               ║
+║  Database: ${dbConnected ? 'MongoDB' : 'Unavailable'}       ║
+╚═══════════════════════════════════════════════════╝
+      `);
+  });
 };
 
 // Handle graceful shutdown
