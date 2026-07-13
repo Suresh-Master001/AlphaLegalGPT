@@ -8,24 +8,14 @@ const API_BASE_URL = (() => {
 })();
 
 const SOCKET_URL = (() => {
+  // First, check if VITE_SOCKET_URL is explicitly configured
   const configured = import.meta.env.VITE_SOCKET_URL;
   if (configured) return configured;
-  // If the frontend is deployed separately from the backend, default socket host to the same host
-  // that serves the REST API (VITE_API_URL). This avoids hardcoding an incorrect production domain.
-  const apiRaw = import.meta.env.VITE_API_URL;
-  if (apiRaw && !apiRaw.startsWith('/')) {
-    const apiNoSlash = apiRaw.replace(/\/$/, '');
-    const apiHost = apiNoSlash.replace(/\/api$/, '');
-    return apiHost;
-  }
-  // Dev fallback: current origin (use the page's origin for local/dev)
+  
+  // For Vercel proxy setups, use current origin which will route through vercel.json rewrites
+  // This ensures socket.io connects through the proxy which forwards to the backend
   return window.location.origin;
 })();
-
-// Debug logging (can be removed in production)
-console.log('[Socket Config] SOCKET_URL:', SOCKET_URL);
-console.log('[Socket Config] VITE_API_URL:', import.meta.env.VITE_API_URL);
-console.log('[Socket Config] VITE_SOCKET_URL:', import.meta.env.VITE_SOCKET_URL);
 
 const getStoredToken = () => {
   return localStorage.getItem('authToken') || 
@@ -65,7 +55,7 @@ export const initializeSocket = (onStatusChange = null) => {
     }
     return socket;
   }
-  
+
   socket = io(SOCKET_URL, {
     transports: ['polling', 'websocket'],
     reconnection: true,
@@ -73,6 +63,7 @@ export const initializeSocket = (onStatusChange = null) => {
     reconnectionAttempts: 10,
     timeout: 20000,
     path: '/socket.io',
+    withCredentials: true,
   });
 
   socket.on('connect', () => {
