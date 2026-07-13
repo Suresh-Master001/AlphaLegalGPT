@@ -2,6 +2,10 @@ import { io } from 'socket.io-client';
 
 const API_BASE_URL = (() => {
   const raw = import.meta.env.VITE_API_URL;
+  // FALLBACK: Direct connection to Render backend when on Vercel without env var
+  if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app') && !raw) {
+    return 'https://alphalegalgpt.onrender.com/api';
+  }
   const trimmed = raw?.replace(/\/$/, '');
   if (!trimmed) return '/api';
   return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
@@ -12,8 +16,13 @@ const SOCKET_URL = (() => {
   const configured = import.meta.env.VITE_SOCKET_URL;
   if (configured) return configured;
   
+  // FALLBACK: Direct connection to Render backend (for production)
+  // This is used when VITE_SOCKET_URL is not set in Vercel environment
+  if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
+    return 'https://alphalegalgpt.onrender.com';
+  }
+  
   // For Vercel proxy setups, use current origin which will route through vercel.json rewrites
-  // This ensures socket.io connects through the proxy which forwards to the backend
   return window.location.origin;
 })();
 
