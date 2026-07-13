@@ -246,17 +246,11 @@ export const useChat = () => {
   }, [STORAGE_KEY, CURRENT_CHAT_KEY, createNewChat]);
 
   /**
-   * Send message
+   * Send message - uses socket with REST API fallback
    */
   const sendMessage = useCallback(async (query) => {
     if (!query.trim()) return;
     
-    const socket = getSocket();
-    if (!socket) {
-      setError('Connection not established');
-      return;
-    }
-
     const userMessage = {
       id: `msg_${Date.now()}`,
       role: 'user',
@@ -299,9 +293,58 @@ export const useChat = () => {
     const currentLocation = await getFreshLocation();
     console.log('[sendMessage] location being sent:', currentLocation);
 
+    const socketInstance = getSocket();
     const isRealtime = localStorage.getItem('realtime') !== 'off';
 
-    socket.emit('chat:message', {
+    // If socket is not connected, use REST API fallback
+    if (!socketInstance || !socketInstance.connected) {
+      console.log('Socket unavailable, using REST API fallback');
+      try {
+        const response = await sendChatMessage(query, sessionId, currentLocation);
+        
+        const aiMessage = {
+          id: `msg_${Date.now()}`,
+          role: 'assistant',
+          content: response.answer,
+          timestamp: getTimestamp(),
+          citations: response.citations || [],
+          confidence: response.confidence || 1.0,
+          isOffline: response.isOffline,
+          section_title: response.section_title,
+        };
+
+        setMessages(prev => [...prev, aiMessage]);
+        setHasGeneratedResponse(true);
+        setIsLoading(false);
+        setIsTyping(false);
+
+        // Update local chats list with messages
+        setChats(prev => {
+          const updated = prev.map(chat => {
+            if (chat.id === sessionId) {
+              return {
+                ...chat,
+                messages: [...chat.messages, { role: 'user', content: query }, aiMessage],
+                updatedAt: getTimestamp(),
+              };
+            }
+            return chat;
+          });
+          saveChats(updated);
+          return updated;
+        });
+
+        if (user) syncWithBackend();
+      } catch (err) {
+        setError(err.message || 'Failed to process request');
+        setIsLoading(false);
+        setIsTyping(false);
+      }
+      return;
+    }
+
+    // Use socket for streaming
+    socketInstance.emit('chat:message', {
       query,
       language: localStorage.getItem('language') || 'en',
       sessionId: sessionId,
@@ -309,7 +352,7 @@ export const useChat = () => {
       location: currentLocation,
       realtime: isRealtime
     });
-  }, [createNewChat, location, isEnabled]);
+  }, [createNewChat, location, isEnabled, sendChatMessage, saveChats, user, syncWithBackend]);
 
   // Handle socket response events
   useEffect(() => {
