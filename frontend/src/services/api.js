@@ -6,7 +6,23 @@ const API_BASE_URL = (() => {
   if (!trimmed) return '/api';
   return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
 })();
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (import.meta.env.PROD ? 'https://alphalegalgpt.onrender.com' : window.location.origin);
+const SOCKET_URL = (() => {
+  const configured = import.meta.env.VITE_SOCKET_URL;
+  if (configured) return configured;
+
+  // If the frontend is deployed separately from the backend, default socket host to the same host
+  // that serves the REST API (VITE_API_URL). This avoids hardcoding an incorrect production domain.
+  const apiRaw = import.meta.env.VITE_API_URL;
+  if (apiRaw) {
+    const apiNoSlash = apiRaw.replace(/\/$/, '');
+    const apiHost = apiNoSlash.replace(/\/api$/, '');
+    return apiHost;
+  }
+
+  // Dev fallback: current origin
+  return window.location.origin;
+})();
+
 
 const getStoredToken = () => {
   return localStorage.getItem('authToken') || 
