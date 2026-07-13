@@ -26,12 +26,22 @@ dotenv.config({ path: join(__dirname, '../.env') });
 const app = express();
 const httpServer = createServer(app);
 
-// Socket.io setup with CORS
+// CORS configuration - support multiple origins
+const defaultAllowed = ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'];
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL || defaultAllowed.join(','))
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+// Socket.io setup with CORS - support multiple origins
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
+    credentials: true,
   },
+  transports: ['websocket', 'polling'],
+  path: '/socket.io',
 });
 
 // Middleware
@@ -46,14 +56,7 @@ const limiter = rateLimit({
 app.use(limiter);
 app.use(morgan('combined'));
 
-// CORS
-// Allowed origins for CORS (local dev defaults; set ALLOWED_ORIGINS/FRONTEND_URL for production).
-const defaultAllowed = ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'];
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL || defaultAllowed.join(','))
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
-
+// CORS middleware
 app.use(cors({
   origin: (origin, callback) => {
     const reqOrigin = origin || '';

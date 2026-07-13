@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { initializeSocket, getSocket, getChatHistory } from '../services/api';
+import { initializeSocket, getSocket, getChatHistory, sendChatMessage, isSocketConnected } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useGeolocation } from './useGeolocation';
 
@@ -35,6 +35,7 @@ export const useChat = () => {
   const [currentChatId, setCurrentChatId] = useState(null);
   const [error, setError] = useState(null);
   const [hasGeneratedResponse, setHasGeneratedResponse] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
   
   const lastQueryRef = useRef('');
   const currentChatIdRef = useRef(null);
@@ -381,9 +382,11 @@ export const useChat = () => {
     };
   }, [user, saveChats, syncWithBackend]); // Removed currentChatId dependency to use ref
 
-  // Initialize and Sync on mount
+// Initialize and Sync on mount
   useEffect(() => {
-    const socket = initializeSocket();
+    const socket = initializeSocket((connected) => {
+      setIsConnected(connected);
+    });
     socket.on('connect', () => console.log('Socket connected'));
     
     loadChats();
@@ -411,6 +414,7 @@ export const useChat = () => {
     isLocationLoading: loading,
     toggleLocation,
     hasGeneratedResponse,
+    isConnected,
   };
 };
 

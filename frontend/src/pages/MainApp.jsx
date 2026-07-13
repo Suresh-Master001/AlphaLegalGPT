@@ -14,7 +14,6 @@ import { checkHealth } from '../services/api';
 function MainApp() {
   const { t, i18n } = useTranslation();
   const [language, setLanguage] = useState(i18n.language || 'en');
-  const [isConnected, setIsConnected] = useState(false);
   const [isCheckingHealth, setIsCheckingHealth] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -41,6 +40,7 @@ function MainApp() {
     isLocationLoading,
     toggleLocation,
     hasGeneratedResponse,
+    isConnected,
   } = useChat();
 
   // Detect laws in the current response
@@ -77,14 +77,15 @@ function MainApp() {
     }
   }, [messages.length]);
 
-  // Check backend health on mount
+  // Note: isConnected is now coming from useChat hook which tracks socket connection status
+  // The health check endpoint still works but we rely on socket connection status for UI
   useEffect(() => {
     const checkBackendHealth = async () => {
       try {
-        const health = await checkHealth();
-        setIsConnected(health.status === 'ok');
+        await checkHealth();
+        // Socket connection status is already handled by useChat hook
       } catch (err) {
-        setIsConnected(false);
+        // Socket connection status will show as disconnected
       } finally {
         setIsCheckingHealth(false);
       }

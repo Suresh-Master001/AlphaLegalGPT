@@ -37,30 +37,73 @@ const getAuthHeaders = () => {
 let socket = null;
 
 /**
- * Initialize socket connection
+ * Connection status callback
  */
-export const initializeSocket = () => {
+let connectionStatusCallback = null;
+
+/**
+ * Initialize socket connection with proper error handling
+ */
+export const initializeSocket = (onStatusChange = null) => {
+  connectionStatusCallback = onStatusChange;
+  
   if (!socket) {
     socket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
+      timeout: 10000,
     });
 
     socket.on('connect', () => {
-      console.log('Socket connected:', socket.id);
+      console.log('✅ Socket connected:', socket.id);
+      if (connectionStatusCallback) {
+        connectionStatusCallback(true);
+      }
     });
 
-    socket.on('disconnect', () => {
-      console.log('Socket disconnected');
+    socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+      if (connectionStatusCallback) {
+        connectionStatusCallback(false);
+      }
     });
 
     socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
+      console.error('🔴 Socket connection error:', error.message);
+      if (connectionStatusCallback) {
+        connectionStatusCallback(false);
+      }
+    });
+    
+    socket.on('reconnect_attempt', (attempt) => {
+      console.log('Socket reconnect attempt:', attempt);
+    });
+    
+    socket.on('reconnect', () => {
+      console.log('Socket reconnected successfully');
+      if (connectionStatusCallback) {
+        connectionStatusCallback(true);
+      }
     });
   }
   return socket;
+};
+
+/**
+ * Check if socket is connected
+ */
+export const isSocketConnected = () => {
+  return socket && socket.connected;
+};
+
+/**
+ * Get socket connection state
+ */
+export const getSocketState = () => {
+  if (!socket) return 'disconnected';
+  return socket.connected ? 'connected' : 'connecting';
 };
 
 /**
