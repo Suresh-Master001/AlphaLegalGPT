@@ -161,7 +161,7 @@ router.post('/', optionalAuthMiddleware, async (req, res) => {
           isFromHistory = true;
         } else {
           const genAI = getGenAI();
-          const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+          const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
           const fullPrompt = `${getSystemPrompt(language, location)}\n\nUser Question:\n${query}`;
 
           const result = await model.generateContent(fullPrompt);
@@ -335,7 +335,7 @@ export const setupSocketHandlers = (io) => {
               socket.emit('chat:stream', { text: fullResponseText });
             } else {
               const genAI = getGenAI();
-              const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+              const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
               const fullPrompt = `${getSystemPrompt(language, location)}\n\nUser Question:\n${query}`;
 
               // Use streaming for better responsiveness

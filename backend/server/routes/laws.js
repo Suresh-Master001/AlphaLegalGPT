@@ -58,7 +58,7 @@ const translateLaw = async (law) => {
 
     try {
         const genAI = getGenAI();
-        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         const prompt = `
             Translate this Indian legal section to professional Tamil.
             Keep section ID (e.g. IPC 420) in English.
