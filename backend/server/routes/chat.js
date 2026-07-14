@@ -153,21 +153,28 @@ router.post('/', optionalAuthMiddleware, async (req, res) => {
     // SCENARIO 1: Real-time is ON and API Key exists
     if (isRealtimeRequest && apiKey) {
       try {
-        const genAI = getGenAI();
-        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-        const fullPrompt = `${getSystemPrompt(language, location)}\n\nUser Question:\n${query}`;
+        // Check database/history first to handle rate limits / cache matches
+        const historyMatch = await LocalSearch.findInHistory(query);
+        if (historyMatch && historyMatch.score >= 0.7) {
+          console.log(`🎯 Cache Hit! Serving from history (Score: ${historyMatch.score}) to prevent rate limits.`);
+          answer = historyMatch.answer;
+          isFromHistory = true;
+        } else {
+          const genAI = getGenAI();
+          const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+          const fullPrompt = `${getSystemPrompt(language, location)}\n\nUser Question:\n${query}`;
 
-        const result = await model.generateContent(fullPrompt);
-        const response = await result.response;
-        answer = response.text();
-        
-        // ONLY Save to Global History (Our "dataset") if it's a valid legal response
-        // Avoid saving "I am a legal AI..." refusals for non-legal questions like "what is java"
-        const isRefusal = answer.includes(LEGAL_FALLBACK_EN) || answer.includes(LEGAL_FALLBACK_TA);
-        if (!isRefusal) {
-          await GlobalHistory.save(query, answer);
+          const result = await model.generateContent(fullPrompt);
+          const response = await result.response;
+          answer = response.text();
+          
+          // ONLY Save to Global History (Our "dataset") if it's a valid legal response
+          // Avoid saving "I am a legal AI..." refusals for non-legal questions like "what is java"
+          const isRefusal = answer.includes(LEGAL_FALLBACK_EN) || answer.includes(LEGAL_FALLBACK_TA);
+          if (!isRefusal) {
+            await GlobalHistory.save(query, answer);
+          }
         }
-        
       } catch (apiError) {
         console.error('🚫 Gemini API Error (HTTP):', apiError.message);
         const historyResult = await LocalSearch.search(query, language);
@@ -319,25 +326,33 @@ export const setupSocketHandlers = (io) => {
         // Try Gemini only if allowed and key exists
         if (isRealtimeRequest && apiKey) {
           try {
-            const genAI = getGenAI();
-            const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-            const fullPrompt = `${getSystemPrompt(language, location)}\n\nUser Question:\n${query}`;
+            // Check database/history first to handle rate limits / cache matches
+            const historyMatch = await LocalSearch.findInHistory(query);
+            if (historyMatch && historyMatch.score >= 0.7) {
+              console.log(`🎯 Socket Cache Hit! Serving from history (Score: ${historyMatch.score}) to prevent rate limits.`);
+              fullResponseText = historyMatch.answer;
+              isFromHistory = true;
+              socket.emit('chat:stream', { text: fullResponseText });
+            } else {
+              const genAI = getGenAI();
+              const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+              const fullPrompt = `${getSystemPrompt(language, location)}\n\nUser Question:\n${query}`;
 
-            // Use streaming for better responsiveness
-            const result = await model.generateContentStream(fullPrompt);
+              // Use streaming for better responsiveness
+              const result = await model.generateContentStream(fullPrompt);
 
-            for await (const chunk of result.stream) {
-              const chunkText = chunk.text();
-              fullResponseText += chunkText;
-              socket.emit('chat:stream', { text: chunkText });
+              for await (const chunk of result.stream) {
+                const chunkText = chunk.text();
+                fullResponseText += chunkText;
+                socket.emit('chat:stream', { text: chunkText });
+              }
+              
+              // ONLY Save to Global History if it's a valid legal response
+              const isRefusal = fullResponseText.includes(LEGAL_FALLBACK_EN) || fullResponseText.includes(LEGAL_FALLBACK_TA);
+              if (!isRefusal) {
+                await GlobalHistory.save(query, fullResponseText);
+              }
             }
-            
-            // ONLY Save to Global History if it's a valid legal response
-            const isRefusal = fullResponseText.includes(LEGAL_FALLBACK_EN) || fullResponseText.includes(LEGAL_FALLBACK_TA);
-            if (!isRefusal) {
-              await GlobalHistory.save(query, fullResponseText);
-            }
-
           } catch (apiError) {
             console.error('🚫 Socket Gemini Error:', apiError.message);
             const historyResult = await LocalSearch.search(query, language);
