@@ -33,10 +33,24 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL 
   .map(s => s.trim())
   .filter(Boolean);
 
+const isOriginAllowed = (origin) => {
+  const reqOrigin = origin || '';
+  if (!reqOrigin) return true;
+  if (allowedOrigins.includes(reqOrigin) || allowedOrigins.includes('*')) return true;
+  if (reqOrigin.endsWith('.vercel.app') || /^https?:\/\/localhost(:\d+)?$/.test(reqOrigin)) return true;
+  return false;
+};
+
 // Socket.io setup with CORS - support multiple origins
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (isOriginAllowed(origin)) {
+        callback(null, origin || '*');
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -82,7 +96,7 @@ app.use(cors({
     const reqOrigin = origin || '';
     if (!reqOrigin) return callback(null, true);
 
-    if (allowedOrigins.includes(reqOrigin)) return callback(null, reqOrigin);
+    if (isOriginAllowed(reqOrigin)) return callback(null, reqOrigin);
 
     // Allow same-origin / direct requests.
     return callback(null, false);
@@ -131,7 +145,7 @@ const authMiddleware = (req, res, next) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/laws', lawsRoutes);
-app.use('/api/chat', authMiddleware, chatRoutes);
+app.use('/api/chat', chatRoutes);
 app.use('/api/upload', authMiddleware, uploadRoutes);
 
 // Health check endpoint

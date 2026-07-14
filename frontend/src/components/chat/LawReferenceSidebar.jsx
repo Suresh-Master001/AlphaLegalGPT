@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { FiX, FiBook, FiInfo, FiChevronRight, FiChevronDown, FiAlertCircle } from 'react-icons/fi';
+import { API_BASE_URL } from '../../services/api';
 
 const LawReferenceSidebar = ({ detectedLaws, isOpen, onClose }) => {
   const { t, i18n } = useTranslation();
@@ -20,7 +21,7 @@ const LawReferenceSidebar = ({ detectedLaws, isOpen, onClose }) => {
       const lang = i18n.language && i18n.language.startsWith('ta') ? 'ta' : 'en';
       console.log(`📡 Fetching laws for: "${queryStr}" [lang=${lang}]`);
       
-      const response = await fetch(`/api/laws/search?q=${encodeURIComponent(queryStr)}&lang=${lang}`);
+      const response = await fetch(`${API_BASE_URL}/laws/search?q=${encodeURIComponent(queryStr)}&lang=${lang}`);
       
       if (!response.ok) {
         const errorText = await response.text();

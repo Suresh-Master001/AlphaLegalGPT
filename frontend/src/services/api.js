@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 
-const API_BASE_URL = (() => {
+export const API_BASE_URL = (() => {
   const raw = import.meta.env.VITE_API_URL;
   // FALLBACK: Direct connection to Render backend when on Vercel without env var
   if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app') && !raw) {

@@ -15,6 +15,36 @@ dotenv.config({ path: join(__dirname, '../../.env') });
 
 const router = express.Router();
 
+const authMiddleware = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+  
+  const token = authHeader.substring(7);
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(403).json({ error: 'Invalid token' });
+  }
+};
+
+const optionalAuthMiddleware = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+      req.user = decoded;
+    } catch (error) {
+      // Ignore invalid token for optional auth
+    }
+  }
+  next();
+};
+
 // Cache API key to avoid reloading .env on every request
 let cachedApiKey = null;
 let lastCacheTime = 0;
@@ -104,7 +134,7 @@ IMPORTANT:
 };
 
 // POST /api/chat
-router.post('/', async (req, res) => {
+router.post('/', optionalAuthMiddleware, async (req, res) => {
   try {
     const { query, language, location, realtime } = req.body;
     const isRealtimeRequest = realtime !== false;
@@ -165,38 +195,40 @@ router.post('/', async (req, res) => {
       isFromHistory
     });
 
-    // Save to history asynchronously
-    const userId = req.user.id;
-    const sessionId = req.body.sessionId || 'default';
-    const existingChat = await Chat.findSession(userId, sessionId);
+    // Save to history asynchronously if user is logged in
+    const userId = req.user?.id;
+    if (userId) {
+      const sessionId = req.body.sessionId || 'default';
+      const existingChat = await Chat.findSession(userId, sessionId);
 
-    const userMessage = {
-      id: `msg_${Date.now()}`,
-      role: 'user',
-      content: query,
-      timestamp: new Date().toISOString()
-    };
+      const userMessage = {
+        id: `msg_${Date.now()}`,
+        role: 'user',
+        content: query,
+        timestamp: new Date().toISOString()
+      };
 
-    const aiMessage = {
-      id: `msg_${Date.now() + 1}`,
-      role: 'assistant',
-      content: answer,
-      timestamp: new Date().toISOString()
-    };
+      const aiMessage = {
+        id: `msg_${Date.now() + 1}`,
+        role: 'assistant',
+        content: answer,
+        timestamp: new Date().toISOString()
+      };
 
-    const updatedMessages = [...(existingChat?.messages || []), userMessage, aiMessage];
+      const updatedMessages = [...(existingChat?.messages || []), userMessage, aiMessage];
 
-    // Auto-generate title if it's the first message
-    let title = existingChat?.title || 'New Chat';
-    if (title === 'New Chat' || !existingChat) {
-      title = query.slice(0, 30) + (query.length > 30 ? '...' : '');
+      // Auto-generate title if it's the first message
+      let title = existingChat?.title || 'New Chat';
+      if (title === 'New Chat' || !existingChat) {
+        title = query.slice(0, 30) + (query.length > 30 ? '...' : '');
+      }
+
+      await Chat.saveOrUpdate(userId, {
+        id: sessionId,
+        title,
+        messages: updatedMessages
+      });
     }
-
-    await Chat.saveOrUpdate(userId, {
-      id: sessionId,
-      title,
-      messages: updatedMessages
-    });
 
   } catch (error) {
     console.error('Chat error:', error);
@@ -208,7 +240,7 @@ router.post('/', async (req, res) => {
 });
 
 // GET /api/chat/history
-router.get('/history', async (req, res) => {
+router.get('/history', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const chats = await Chat.findByUser(userId);
@@ -220,7 +252,7 @@ router.get('/history', async (req, res) => {
 });
 
 // GET /api/chat/history/:sessionId
-router.get('/history/:sessionId', async (req, res) => {
+router.get('/history/:sessionId', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const { sessionId } = req.params;
@@ -233,7 +265,7 @@ router.get('/history/:sessionId', async (req, res) => {
 });
 
 // DELETE /api/chat/history/:sessionId
-router.get('/clear-all', async (req, res) => {
+router.get('/clear-all', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     await Chat.clear(userId);
@@ -244,7 +276,7 @@ router.get('/clear-all', async (req, res) => {
   }
 });
 
-router.delete('/history/:sessionId', async (req, res) => {
+router.delete('/history/:sessionId', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const { sessionId } = req.params;

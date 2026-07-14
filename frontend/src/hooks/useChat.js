@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { initializeSocket, getSocket, getChatHistory, sendChatMessage, isSocketConnected } from '../services/api';
+import { initializeSocket, getSocket, getChatHistory, sendChatMessage, isSocketConnected, API_BASE_URL } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useGeolocation } from './useGeolocation';
 
@@ -138,7 +138,7 @@ export const useChat = () => {
     if (!user) return;
     
     try {
-      const response = await fetch('/api/chat/history', {
+      const response = await fetch(`${API_BASE_URL}/chat/history`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
         }
@@ -168,7 +168,7 @@ export const useChat = () => {
    */
   const deleteChat = useCallback(async (sessionId) => {
     try {
-      await fetch(`/api/chat/history/${sessionId}`, {
+      await fetch(`${API_BASE_URL}/chat/history/${sessionId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
@@ -225,7 +225,7 @@ export const useChat = () => {
    */
   const clearAllHistory = useCallback(async () => {
     try {
-      const response = await fetch('/api/chat/clear-all', {
+      const response = await fetch(`${API_BASE_URL}/chat/clear-all`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
         }
