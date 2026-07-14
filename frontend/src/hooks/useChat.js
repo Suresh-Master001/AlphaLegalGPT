@@ -354,10 +354,11 @@ export const useChat = () => {
     });
   }, [createNewChat, location, isEnabled, sendChatMessage, saveChats, user, syncWithBackend]);
 
-  // Handle socket response events
+  // Handle socket response events & initialization
   useEffect(() => {
-    const socket = getSocket();
-    if (!socket) return;
+    const socketInstance = initializeSocket((connected) => {
+      setIsConnected(connected);
+    });
 
     const handleTyping = (data) => {
        setIsTyping(data.isTyping);
@@ -412,31 +413,21 @@ export const useChat = () => {
       setIsTyping(false);
     };
 
-    socket.on('chat:typing', handleTyping);
-    socket.on('chat:stream', handleStream);
-    socket.on('chat:complete', handleComplete);
-    socket.on('chat:error', handleError);
+    socketInstance.on('chat:typing', handleTyping);
+    socketInstance.on('chat:stream', handleStream);
+    socketInstance.on('chat:complete', handleComplete);
+    socketInstance.on('chat:error', handleError);
 
-    return () => {
-      socket.off('chat:typing', handleTyping);
-      socket.off('chat:stream', handleStream);
-      socket.off('chat:complete', handleComplete);
-      socket.off('chat:error', handleError);
-    };
-  }, [user, saveChats, syncWithBackend]); // Removed currentChatId dependency to use ref
-
-// Initialize and Sync on mount
-  useEffect(() => {
-    const socket = initializeSocket((connected) => {
-      setIsConnected(connected);
-    });
-    socket.on('connect', () => console.log('Socket connected'));
-    
     loadChats();
     if (user) syncWithBackend();
 
-    return () => {};
-  }, [user?.id, isAuthenticated, loadChats, syncWithBackend]);
+    return () => {
+      socketInstance.off('chat:typing', handleTyping);
+      socketInstance.off('chat:stream', handleStream);
+      socketInstance.off('chat:complete', handleComplete);
+      socketInstance.off('chat:error', handleError);
+    };
+  }, [user?.id, isAuthenticated, loadChats, syncWithBackend, saveChats]);
 
   return {
     messages,
