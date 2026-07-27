@@ -189,14 +189,14 @@ const SettingsModal = ({ isOpen, onClose }) => {
                  </div>
                </button>
 
-              <button 
-                 onClick={() => window.open("mailto:support@alphalegal.com", "_blank")}
-                 className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-[#F6F7FB] rounded-xl transition-colors font-body">
-                 <div className="flex items-center gap-4 text-[#0B0D1C]">
-                    <FiMessageSquare className="w-5 h-5" />
-                    <span className="text-[15px]">Contact Support & Feedback</span>
-                 </div>
-               </button>
+               <button 
+                  onClick={() => window.open("mailto:contact@codenxte.com", "_blank")}
+                  className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-[#F6F7FB] rounded-xl transition-colors font-body">
+                  <div className="flex items-center gap-4 text-[#0B0D1C]">
+                     <FiMessageSquare className="w-5 h-5" />
+                     <span className="text-[15px]">Contact Support & Feedback</span>
+                  </div>
+                </button>
 
               <button className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-[#F6F7FB] rounded-xl transition-colors font-body">
                  <div className="flex items-center gap-4 text-[#0B0D1C]">

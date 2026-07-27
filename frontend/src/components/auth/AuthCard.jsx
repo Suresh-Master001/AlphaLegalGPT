@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const AuthCard = ({ children }) => {
+const AuthCard = ({ children, showBranding = true }) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20, scale: 0.98 }}
@@ -15,6 +15,16 @@ const AuthCard = ({ children }) => {
       className="bg-white border border-[#E7E9F3] rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-all p-6 duration-300"
     >
       {children}
+      {showBranding && (
+        <div className="mt-6 pt-4 border-t border-[#E7E9F3] text-center">
+          <p className="text-xs text-[#9AA0B4] font-body">
+            Powered by{' '}
+            <a href="https://codenxte.com" target="_blank" rel="noopener noreferrer" className="text-[#2541D6] hover:text-[#6B21D9] transition-colors font-medium">
+              CodeNxte Web & Software Solutions
+            </a>
+          </p>
+        </div>
+      )}
     </motion.div>
   );
 };

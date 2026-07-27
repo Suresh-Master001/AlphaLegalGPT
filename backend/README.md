@@ -1,5 +1,7 @@
 # AlphaLegalGPT Backend
 
+**Owned & Maintained by [CodeNxte Web & Software Solutions](https://codenxte.com)**
+
 AI-powered legal assistant backend for Indian law (IPC, BNS 2023), built with Express, Socket.io, and Google Gemini.
 
 ## Stack

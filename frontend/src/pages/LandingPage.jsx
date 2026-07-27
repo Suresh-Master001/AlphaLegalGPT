@@ -459,7 +459,7 @@ const LandingPage = ({ onGetStarted }) => {
           </p>
 
           <div className="text-sm text-[#5C6178] font-body">
-            © {currentYear} AlphaLegalGPT. All rights reserved.
+            © {currentYear} AlphaLegalGPT. All rights reserved. | Powered by <a href="https://codenxte.com" target="_blank" rel="noopener noreferrer" className="text-[#2541D6] hover:text-[#6B21D9] transition-colors">CodeNxte Web & Software Solutions</a>
           </div>
         </div>
       </footer>

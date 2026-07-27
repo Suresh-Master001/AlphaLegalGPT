@@ -1,5 +1,7 @@
 # AlphaLegalGPT
 
+**Owned & Maintained by [CodeNxte Web & Software Solutions](https://codenxte.com)**
+
 AlphaLegalGPT is an advanced AI Legal Assistant web application powered by the Google Gemini API. It provides users with intelligent, context-aware legal assistance, featuring real-time chat capabilities, secure authentication with OTP verification, and document analysis functionality.
 
 ## 🎯 User Outcomes & Benefits
@@ -137,6 +139,18 @@ VITE_SOCKET_URL=http://localhost:3001
 
 The application will be available at `http://localhost:5173`.
 
-## License
+## License & Ownership
 
-This project is proprietary and confidential.
+This project is **proprietary and confidential** — owned and maintained by **CodeNxte Web & Software Solutions**.
+
+- **Product:** AlphaLegalGPT
+- **Owner:** [CodeNxte Web & Software Solutions](https://codenxte.com)
+- **Website:** [https://codenxte.com](https://codenxte.com)
+- **Email:** contact@codenxte.com
+
+---
+
+<div align="center">
+  <strong>Made with ❤️ by <a href="https://codenxte.com">CodeNxte Web & Software Solutions</a></strong>
+  <br/>
+  <sub>© 2026 CodeNxte Web & Software Solutions. All rights reserved.</sub>
