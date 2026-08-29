@@ -4,22 +4,30 @@ import { useTranslation } from 'react-i18next';
 import ChatMessage from '../components/chat/ChatMessage';
 
 const TypingIndicator = () => (
-  <div className="flex gap-4 mb-6">
+  <motion.div
+    initial={{ opacity: 0, y: 12 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="flex gap-3.5 mb-6 md:mb-8"
+  >
     <div className="flex-shrink-0">
-      <div className="w-10 h-10 rounded-full bg-white border border-[#E7E9F3] shadow-sm flex items-center justify-center">
+      <motion.div
+        initial={{ scale: 0.9 }}
+        animate={{ scale: 1 }}
+        className="w-10 h-10 rounded-xl bg-white border border-[#E7E9F3] shadow-sm flex items-center justify-center"
+      >
         <img src="/AlphaLegalGPT_Logo.png" alt="AlphaLegalGPT" className="w-5 h-5 object-contain" />
-      </div>
+      </motion.div>
     </div>
-    <div className="flex items-center">
-      <div className="bg-[#F6F7FB] rounded-2xl rounded-bl-md px-4 py-3 border border-[#E7E9F3]">
-        <div className="flex gap-1">
-          <div className="w-2 h-2 bg-[#9AA0B4]/60 rounded-full typing-dot" />
-          <div className="w-2 h-2 bg-[#9AA0B4]/60 rounded-full typing-dot" />
-          <div className="w-2 h-2 bg-[#9AA0B4]/60 rounded-full typing-dot" />
+    <div className="flex items-end">
+      <div className="px-4 py-3 bg-[#F6F7FB]/70 backdrop-blur rounded-2xl rounded-bl-md border border-[#E7E9F3] shadow-sm">
+        <div className="flex items-center gap-1">
+          <span className="typing-dot w-2 h-2 bg-[#9AA0B4]/60 rounded-full block" />
+          <span className="typing-dot w-2 h-2 bg-[#9AA0B4]/60 rounded-full block" />
+          <span className="typing-dot w-2 h-2 bg-[#9AA0B4]/60 rounded-full block" />
         </div>
       </div>
     </div>
-  </div>
+  </motion.div>
 );
 
 const WelcomeScreen = ({ onExampleClick }) => {
@@ -43,9 +51,14 @@ const WelcomeScreen = ({ onExampleClick }) => {
       className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4"
     >
       {/* Logo with gradient chip */}
-      <div className="w-16 h-16 mb-6">
-        <img src="/AlphaLegalGPT_Logo.png" alt="AlphaLegalGPT Logo" />
-      </div>
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.1, duration: 0.4 }}
+        className="w-24 h-24 sm:w-28 sm:h-28 mb-6 rounded-3xl bg-white/70 backdrop-blur-md border border-white/80 shadow-[0_8px_30px_rgba(37,65,214,0.12)] p-3 flex items-center justify-center"
+      >
+        <img src="/AlphaLegalGPT_Logo.png" alt="AlphaLegalGPT Logo" className="w-14 h-14 object-contain" />
+      </motion.div>
 
       {/* Title */}
       <h2 className="text-3xl font-display font-bold bg-gradient-to-r from-[#2541D6] via-[#6B21D9] to-[#8B5CF6] bg-clip-text text-transparent mb-3">
@@ -69,7 +82,7 @@ const WelcomeScreen = ({ onExampleClick }) => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => onExampleClick(example)}
-              className="text-left p-4 bg-white border border-[#E7E9F3] hover:bg-[#F6F7FB] text-[#0B0D1C] group rounded-xl shadow-sm hover:shadow-md transition-all duration-200"
+              className="text-left p-4 glass-panel hover:bg-white/90 text-[#0B0D1C] group rounded-2xl shadow-sm hover:shadow-lg hover:shadow-brand/10 card-hover-subtle border-white/60"
             >
               <span className="text-[#0B0D1C] group-hover:text-[#2541D6] transition-colors font-body">
                 {example}
@@ -77,6 +90,19 @@ const WelcomeScreen = ({ onExampleClick }) => {
             </motion.button>
           ))}
         </div>
+
+        {/* Powered by caption */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="text-center text-xs text-[#9AA0B4] font-body mt-8"
+        >
+          Powered by{' '}
+          <a href="https://codenxte.com" target="_blank" rel="noopener noreferrer" className="text-[#2541D6] hover:text-[#6B21D9] transition-colors font-medium">
+            CodeNxte Web &amp; Software Solutions
+          </a>
+        </motion.p>
       </div>
     </motion.div>
   );
@@ -90,8 +116,8 @@ const ChatWindow = ({ messages, isTyping, isLoading, streamingText, onExampleCli
   }, [messages, streamingText, isTyping]);
 
   return (
-    <div className="flex-1 overflow-y-auto smooth-scroll pb-24">
-      <div className="max-w-[900px] mx-auto px-4 pt-6">
+    <div className="flex-1 overflow-y-auto smooth-scroll pb-6 md:pb-8 mobile-safe-top">
+      <div className="max-w-[1300px] mx-auto px-3 sm:px-4 pt-6 md:pt-8">
         {/* Show welcome screen if no messages */}
         {messages.length === 0 && !streamingText ? (
           <WelcomeScreen onExampleClick={onExampleClick} />

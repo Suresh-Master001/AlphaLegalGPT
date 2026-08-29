@@ -12,16 +12,18 @@ import {
 } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext';
 
-const Sidebar = ({ 
-  chats, 
-  currentChatId, 
-  onNewChat, 
-  onSelectChat, 
+const Sidebar = ({
+  chats,
+  currentChatId,
+  onNewChat,
+  onSelectChat,
   onDeleteChat,
   language,
   onLanguageChange,
   onSettingsClick,
-  onClearAllHistory
+  onClearAllHistory,
+  isOpen = true,
+  onCloseMobile,
 }) => {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
@@ -44,15 +46,14 @@ const Sidebar = ({
     { code: 'ta', name: 'தமிழ்', label: 'TA' },
   ];
 
-  return (
+    return (
     <motion.aside
-      initial={{ x: -260 }}
-      animate={{ x: 0 }}
+      initial={false}
+      animate={{ x: isOpen ? 0 : -260 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="fixed left-0 top-0 h-full w-[260px] bg-white border-r border-[#E7E9F3] flex flex-col z-50"
+      className="fixed left-0 top-0 h-full w-[260px] bg-white/85 backdrop-blur-md border-r border-[#E7E9F3]/70 flex flex-col z-50 shadow-[4px_0_24px_rgba(37,65,214,0.06)]"
     >
-      {/* Header */}
-      <div className="p-4 border-b border-[#E7E9F3]">
+            <div className="p-4 border-b border-[#E7E9F3] flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img src="/AlphaLegalGPT_Logo.png" alt="AlphaLegalGPT Logo" className="w-12 h-12 object-contain" />
           <div>
@@ -60,6 +61,17 @@ const Sidebar = ({
             <p className="text-xs text-[#5C6178] font-body">{t('appSubtitle')}</p>
           </div>
         </div>
+        {onCloseMobile && (
+          <button
+            onClick={onCloseMobile}
+            className="md:hidden p-1.5 rounded-lg text-[#5C6178] hover:bg-[#F6F7FB] hover:text-[#0B0D1C] transition-colors"
+            aria-label="Close sidebar"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* New Chat Button */}
@@ -159,7 +171,7 @@ const Sidebar = ({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
               transition={{ duration: 0.15 }}
-              className="absolute bottom-16 left-3 right-3 bg-white border border-[#E7E9F3] shadow-2xl rounded-xl overflow-hidden z-50 flex flex-col"
+              className="absolute bottom-20 left-3 right-3 bg-white border border-[#E7E9F3] shadow-2xl rounded-xl overflow-hidden z-50 flex flex-col"
             >
               {/* User Details */}
               <div className="px-4 py-3 border-b border-[#E7E9F3] bg-[#F6F7FB]">
@@ -224,6 +236,14 @@ const Sidebar = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
           </svg>
         </button>
+
+        {/* Powered by caption */}
+        <p className="mt-2.5 text-center text-[10px] text-[#9AA0B4] font-body truncate">
+          Powered by{' '}
+          <a href="https://codenxte.com" target="_blank" rel="noopener noreferrer" className="text-[#2541D6] hover:text-[#6B21D9] transition-colors font-medium">
+            CodeNxte
+          </a>
+        </p>
       </div>
     </motion.aside>
   );

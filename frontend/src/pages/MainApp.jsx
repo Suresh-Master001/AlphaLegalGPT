@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import Sidebar from '../components/layout/Sidebar';
-import { FiBook } from 'react-icons/fi';
+import { FiBook, FiMenu } from 'react-icons/fi';
 import ChatWindow from './ChatWindow';
 import ChatInput from '../components/chat/ChatInput';
 import SettingsModal from '../components/modals/SettingsModal';
@@ -17,8 +17,11 @@ function MainApp() {
   const [isCheckingHealth, setIsCheckingHealth] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
-  const [isNearbyOpen, setIsNearbyOpen] = useState(false);
+    const [isNearbyOpen, setIsNearbyOpen] = useState(false);
   const [isLawSidebarOpen, setIsLawSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth >= 768
+  );
   const [detectedLaws, setDetectedLaws] = useState([]);
 
   const {
@@ -134,49 +137,9 @@ function MainApp() {
   };
 
   return (
-    <div className="flex h-screen bg-[#FCFCFF] relative">
-      {/* Aurora mesh background - shared with landing page */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage:
-              'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27120%27 height=%27120%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%27.8%27 numOctaves=%273%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27120%27 height=%27120%27 filter=%27url(%23n)%27 opacity=%270.45%27/%3E%3C/svg%3E")',
-          }}
-        />
+    <div className="flex h-screen bg-mesh-subtle relative">
 
-        <motion.div
-          animate={{ x: [0, 20, 0], y: [0, -10, 0] }}
-          transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute -top-60 -left-60 w-[52rem] h-[52rem] rounded-full"
-          style={{
-            background: 'radial-gradient(circle at center, rgba(62,99,255,0.35) 0%, rgba(62,99,255,0) 60%)',
-            filter: 'blur(130px)',
-          }}
-        />
-
-        <motion.div
-          animate={{ x: [0, -16, 0], y: [0, 14, 0] }}
-          transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-          className="absolute -bottom-56 -right-64 w-[58rem] h-[58rem] rounded-full"
-          style={{
-            background: 'radial-gradient(circle at center, rgba(139,63,232,0.25) 0%, rgba(139,63,232,0) 60%)',
-            filter: 'blur(140px)',
-          }}
-        />
-
-        <motion.div
-          animate={{ x: [0, 14, 0], y: [0, 10, 0] }}
-          transition={{ duration: 17, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
-          className="absolute top-28 right-[-20rem] w-[44rem] h-[44rem] rounded-full"
-          style={{
-            background: 'radial-gradient(circle at center, rgba(226,63,160,0.2) 0%, rgba(226,63,160,0) 60%)',
-            filter: 'blur(150px)',
-          }}
-        />
-      </div>
-
-      {/* Left Sidebar */}
+            {/* Left Sidebar */}
       <Sidebar
         chats={chats}
         currentChatId={currentChatId}
@@ -187,25 +150,42 @@ function MainApp() {
         onLanguageChange={handleLanguageChange}
         onSettingsClick={() => setIsSettingsOpen(true)}
         onClearAllHistory={clearAllHistory}
+        isOpen={isSidebarOpen}
+        onCloseMobile={() => setIsSidebarOpen(false)}
       />
+
+      {/* Mobile backdrop overlay - shows while sidebar is open on small screens */}
+      {isSidebarOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+          onClick={() => setIsSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
       {/* Main Content */}
       <main
-        className="flex-1 ml-[260px] flex flex-col h-full transition-all duration-300"
-        style={{ marginRight: isNearbyOpen ? '300px' : '0' }}
+        className={`flex-1 ${isSidebarOpen ? 'md:ml-[260px]' : ''} ${isNearbyOpen ? 'md:mr-[300px]' : ''} flex flex-col h-full transition-all duration-300`}
       >
         {/* Header */}
         <motion.header
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between px-6 py-4 border-b border-[#E7E9F3] bg-white/80 backdrop-blur-xl sticky top-0 z-40"
+          className="flex items-center justify-between gap-2 px-3 md:px-6 py-3 md:py-4 border-b border-[#E7E9F3] bg-white/80 backdrop-blur-xl sticky top-0 z-40 safe-top"
         >
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-display font-semibold text-[#0B0D1C]">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="md:hidden p-1.5 rounded-lg text-[#5C6178] hover:bg-[#F6F7FB] hover:text-[#0B0D1C] transition-colors shrink-0"
+              aria-label="Open sidebar"
+            >
+              <FiMenu className="w-5 h-5" />
+            </button>
+            <h2 className="text-base sm:text-lg font-display font-semibold gradient-text truncate min-w-0">
               {chats.find(c => c.id === currentChatId)?.title || t('appName')}
             </h2>
             {isConnected && (
-              <span className="flex items-center gap-1.5 text-xs text-[#10B981] bg-white border border-[#E7E9F3] px-2 py-1 rounded-full font-mono font-medium">
+              <span className="hidden sm:flex items-center gap-1.5 shrink-0 text-xs text-[#10B981] bg-white border border-[#E7E9F3] px-2 py-1 rounded-full font-mono font-medium">
                 <span className="w-2 h-2 bg-[#10B981] rounded-full animate-pulse" />
                 {t('connected')}
               </span>

@@ -311,25 +311,60 @@ export const clearChatHistory = async (sessionId) => {
       method: 'DELETE',
       headers: getAuthHeaders()
     });
-    return await response.json();
+    return handleApiResponse(response);
   } catch (error) {
     console.error('Error clearing chat history:', error);
     throw error;
   }
 };
 
+/**
+ * Safely parse a Response body as JSON.
+ *
+ * Guards against the opaque "JSON.parse: unexpected end of data at line 1
+ * column 1 of the JSON data" SyntaxError that `response.json()` throws when the
+ * server returns an empty body (e.g. a 204, a 502/empty proxy response when the
+ * backend is down, a redirect, or any non-JSON payload). Only attempts a real
+ * JSON parse when the `content-type` is actually `application/json`, and otherwise
+ * consumes the body text and resolves to `null`.
+ */
+const safeParseJson = async (response) => {
+  const contentType = response.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    try {
+      return await response.json();
+    } catch (e) {
+      // Body claimed JSON but was empty/malformed — fail soft so callers can
+      // report a meaningful error instead of an opaque SyntaxError.
+      return null;
+    }
+  }
+
+  // Non-JSON (or empty) body — drain the stream so it can be reused if needed.
+  if (response.body) {
+    try {
+      await response.text();
+    } catch (e) {
+      /* network/streaming error — ignore, data stays null */
+    }
+  }
+  return null;
+};
+
 const handleApiResponse = async (response) => {
-  const data = await response.json();
-  
+  const data = await safeParseJson(response);
+
   if (!response.ok) {
-    const errorMessage = data.error || 'An error occurred';
+    const errorMessage = (data && data.error) || `Request failed with status ${response.status}`;
     const error = new Error(errorMessage);
-    error.type = data.type || 'unknown_error';
+    error.type = (data && data.type) || 'api_error';
     error.statusCode = response.status;
     error.response = data;
     throw error;
   }
-  
+
+  // Return parsed JSON for success, or null for empty (e.g. 204 No Content) bodies.
   return data;
 };
 

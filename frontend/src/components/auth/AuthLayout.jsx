@@ -3,7 +3,15 @@ import { motion } from 'framer-motion';
 
 const AuthLayout = ({ children, title, subtitle }) => {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[#FCFCFF] p-4">
+    <div className="flex items-center justify-center min-h-screen bg-mesh p-4 relative overflow-hidden">
+      {/* Floating orbs background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <div className="bg-orb bg-orb-1" style={{ top: '-12rem', left: '-8rem' }} />
+        <div className="bg-orb bg-orb-2" style={{ bottom: '-10rem', right: '-8rem' }} />
+        <div className="bg-orb bg-orb-3" style={{ top: '30%', left: '65%', width: '30rem', height: '30rem' }} />
+        <div className="absolute top-1/3 left-1/4 w-56 h-56 rounded-full border border-[#2541D6]/10 animate-spin-slow" />
+      </div>
+
       {/* Background treatment */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
         <div

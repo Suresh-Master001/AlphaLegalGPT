@@ -16,7 +16,7 @@ const ErrorBox = ({ message, type = 'error', actionText, onAction }) => {
     <motion.div
       initial={{ opacity: 0, y: -10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      className={`flex items-center gap-2.5 bg-white/70 backdrop-blur-md ${accentBorder} rounded-full px-4 py-3 mb-6 ${accentText} text-sm font-body border shadow-[0_8px_32px_rgba(62,99,255,0.06)]`}
+      className={`flex items-start gap-2.5 bg-white/70 backdrop-blur-md ${accentBorder} rounded-2xl px-4 py-3 mb-5 ${accentText} text-sm font-body border shadow-[0_8px_32px_rgba(62,99,255,0.06)]`}
     >
       <Icon className={`w-4 h-4 flex-shrink-0 ${iconColor}`} />
       <span className="flex-1">{message}</span>

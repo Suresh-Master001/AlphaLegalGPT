@@ -2,14 +2,67 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
-import { 
-  FiChevronDown, 
-  FiChevronUp, 
+import {
+  FiChevronDown,
+  FiChevronUp,
   FiCheckCircle,
   FiAlertCircle,
-  FiMapPin as FiMapPinIcon 
+  FiCopy,
+  FiCheck,
+  FiMapPin as FiMapPinIcon,
 } from 'react-icons/fi';
 import { FaUserCircle } from 'react-icons/fa';
+
+const Code = ({ node, inline, className, children, ...props }) => {
+  const [copied, setCopied] = useState(false);
+  const codeText = children || '';
+  const match = /language-(\w+)/.exec(className || '') || [];
+  const lang = match[1] || 'code';
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(codeText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch (e) {
+      console.error('Copy failed', e);
+    }
+  };
+
+  if (inline) {
+    return (
+      <code className={className} {...props}>
+        {children}
+      </code>
+    );
+  }
+
+  return (
+    <div className="relative my-2">
+      <pre className={className} {...props}>
+        <code className={`language-${lang}`}>{children}</code>
+      </pre>
+      <button
+        type="button"
+        onClick={handleCopy}
+        aria-label="Copy code"
+        className="code-copy-btn rounded-lg p-1.5 flex items-center gap-1.5 text-[10px] bg-white/80 hover:bg-white border border-[#E7E9F3]"
+      >
+        {copied ? (
+          <>
+            <FiCheck className="w-3 h-3 text-[#2541D6]" />
+            Copied
+          </>
+        ) : (
+          <>
+            <FiCopy className="w-3 h-3 text-[#5C6178]" />
+            Copy
+          </>
+        )}
+      </button>
+    </div>
+  );
+};
 
 const ChatMessage = ({ message, isStreaming }) => {
   const { t } = useTranslation();
@@ -59,14 +112,14 @@ const ChatMessage = ({ message, isStreaming }) => {
         <div
           className={`inline-block max-w-[80%] message-bubble relative group ${
             isUser
-              ? 'bg-white border border-[#E7E9F3] rounded-2xl rounded-br-md'
+              ? 'glass-message-user rounded-2xl rounded-br-md'
               : isError
                 ? 'bg-[#F6F7FB] border border-[#E7E9F3] rounded-2xl'
-                : 'bg-white border border-[#E7E9F3] rounded-2xl rounded-bl-md'
+                : 'glass-panel bg-white/70 rounded-2xl rounded-bl-md'
           } px-4 py-3 shadow-sm
           transition-all duration-300
           group-hover:shadow-[0_12px_32px_rgba(16,24,40,0.08)] group-hover:-translate-y-0.5
-          group-hover:border-[#0B0D1C]/10`}
+          group-hover:border-white/70`}
         >
           {/* AI Badge */}
           {!isUser && !isError && (

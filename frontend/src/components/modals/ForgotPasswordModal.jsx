@@ -205,6 +205,14 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
                 </motion.button>
               </form>
             )}
+
+            {/* Powered by caption */}
+            <p className="text-center text-xs text-[#9AA0B4] font-body mt-6">
+              Powered by{' '}
+              <a href="https://codenxte.com" target="_blank" rel="noopener noreferrer" className="text-[#8B3FE8] hover:text-[#3E63FF] transition-colors font-medium">
+                CodeNxte Web &amp; Software Solutions
+              </a>
+            </p>
           </motion.div>
         </div>
       )}

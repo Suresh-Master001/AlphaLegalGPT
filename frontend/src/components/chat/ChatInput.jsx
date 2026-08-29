@@ -145,7 +145,7 @@ const ChatInput = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: 0.2 }}
-      className="sticky bottom-0 bg-white border-t border-[#E7E9F3] p-4"
+      className="sticky bottom-0 glass-panel border-t border-white/60 px-3 py-3 md:p-4 bg-white/70 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
     >
       <div className="max-w-[900px] mx-auto">
         
@@ -179,7 +179,7 @@ const ChatInput = ({
 
         <form
           onSubmit={handleSubmit}
-          className="relative flex items-end gap-2 bg-white rounded-2xl border border-[#E7E9F3] shadow-sm focus-within:border-[#2541D6]/50 transition-all"
+          className="relative flex items-end gap-2 bg-white/70 glass-input rounded-2xl border border-[#E7E9F3] shadow-sm focus-within:border-[#2541D6]/50 focus-within:ring-2 focus-within:ring-[#2541D6]/10 transition-all"
         >
           {/* Textarea */}
           <div className="flex-1 relative">

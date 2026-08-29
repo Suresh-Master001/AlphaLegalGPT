@@ -70,7 +70,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ duration: 0.2 }}
-          className="bg-white border border-[#E7E9F3] rounded-2xl w-full max-w-md max-h-[90vh] overflow-hidden shadow-2xl flex flex-col"
+          className="glass-panel-strong rounded-2xl w-full max-w-md max-h-[90vh] overflow-hidden shadow-2xl flex flex-col border-white/70"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -209,8 +209,14 @@ const SettingsModal = ({ isOpen, onClose }) => {
 
           <hr className="border-[#E7E9F3]" />
 
-          {/* Footer - Logout Activity */}
-          <div className="flex items-center justify-end px-6 py-4 bg-transparent border-t border-[#E7E9F3]">
+          {/* Footer - Powered by + Logout Activity */}
+          <div className="flex items-center justify-between px-6 py-4 bg-transparent border-t border-[#E7E9F3]">
+             <p className="text-xs text-[#9AA0B4] font-body">
+                Powered by{' '}
+                <a href="https://codenxte.com" target="_blank" rel="noopener noreferrer" className="text-[#2541D6] hover:text-[#6B21D9] transition-colors font-medium">
+                   CodeNxte
+                </a>
+             </p>
              <button 
                 onClick={handleLogout}
                 className="flex items-center gap-2 px-5 py-2 text-sm text-[#0B0D1C] hover:bg-[#F6F7FB] rounded-full transition-colors border border-[#E7E9F3] font-body"
