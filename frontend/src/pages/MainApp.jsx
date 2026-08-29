@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import Sidebar from '../components/layout/Sidebar';
-import { FiBook, FiMenu } from 'react-icons/fi';
+import { FiBook, FiMenu, FiPlus } from 'react-icons/fi';
 import ChatWindow from './ChatWindow';
 import ChatInput from '../components/chat/ChatInput';
 import SettingsModal from '../components/modals/SettingsModal';
@@ -171,34 +171,73 @@ function MainApp() {
         <motion.header
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between gap-2 px-3 md:px-6 py-3 md:py-4 border-b border-[#E7E9F3] bg-white/80 backdrop-blur-xl sticky top-0 z-40 safe-top"
+          className="flex items-center justify-between gap-3 px-4 sm:px-5 md:px-6 pb-3 md:pb-4 border-b border-[#E7E9F3] bg-white/80 backdrop-blur-xl sticky top-0 z-40 safe-top"
         >
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <button
+          <div className="flex items-center gap-2.5 md:gap-3 min-w-0 flex-1">
+            {/* Sidebar toggle (mobile) */}
+            <motion.button
+              whileTap={{ scale: 0.9 }}
               onClick={() => setIsSidebarOpen(true)}
-              className="md:hidden p-1.5 rounded-lg text-[#5C6178] hover:bg-[#F6F7FB] hover:text-[#0B0D1C] transition-colors shrink-0"
+              className="md:hidden p-2.5 rounded-xl bg-white border border-[#E7E9F3] shadow-sm text-[#5C6178] hover:bg-[#F6F7FB] hover:text-[#0B0D1C] transition-colors shrink-0"
               aria-label="Open sidebar"
             >
               <FiMenu className="w-5 h-5" />
-            </button>
-            <h2 className="text-base sm:text-lg font-display font-semibold gradient-text truncate min-w-0">
-              {chats.find(c => c.id === currentChatId)?.title || t('appName')}
-            </h2>
+            </motion.button>
+
+            {/* Brand avatar */}
+            <div className="w-12 h-12 md:w-10 md:h-10">
+              <img src="/AlphaLegalGPT_Logo.png" alt="AlphaLegalGPT Logo" />
+            </div>
+
+            {/* Title + mobile status */}
+            <div className="flex flex-col min-w-0">
+              <h2 className="text-[15px] sm:text-lg font-display font-semibold gradient-text truncate leading-tight">
+                {chats.find(c => c.id === currentChatId)?.title || t('appName')}
+              </h2>
+              {/* Connection status line (mobile) */}
+              {!isCheckingHealth && (
+                <span
+                  className={`flex sm:hidden items-center gap-1.5 text-[11px] font-body font-medium leading-tight ${
+                    isConnected ? 'text-[#10B981]' : 'text-red-500'
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      isConnected ? 'bg-[#10B981] animate-pulse' : 'bg-red-500'
+                    }`}
+                  />
+                  {isConnected ? t('connected') : t('disconnected')}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Connection status pill (desktop) */}
             {isConnected && (
-              <span className="hidden sm:flex items-center gap-1.5 shrink-0 text-xs text-[#10B981] bg-white border border-[#E7E9F3] px-2 py-1 rounded-full font-mono font-medium">
+              <span className="hidden sm:flex items-center gap-1.5 shrink-0 text-xs text-[#10B981] bg-white border border-[#E7E9F3] px-2.5 py-1 rounded-full font-mono font-medium shadow-sm">
                 <span className="w-2 h-2 bg-[#10B981] rounded-full animate-pulse" />
                 {t('connected')}
               </span>
             )}
-          </div>
+            {!isCheckingHealth && !isConnected && (
+              <span className="hidden sm:flex items-center gap-1.5 shrink-0 text-xs text-red-500 bg-red-500/10 border border-red-500/20 px-2.5 py-1 rounded-full font-mono font-medium">
+                <span className="w-2 h-2 bg-red-500 rounded-full" />
+                {t('disconnected')}
+              </span>
+            )}
 
-          {/* Connection status */}
-          {!isCheckingHealth && !isConnected && (
-            <div className="flex items-center gap-2 text-xs text-red-500 font-body">
-              <span className="w-2 h-2 bg-red-500 rounded-full" />
-              {t('disconnected')}
-            </div>
-          )}
+            {/* New chat quick action (mobile) */}
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={createNewChat}
+              className="md:hidden p-2.5 rounded-xl bg-gradient-to-br from-[#2541D6] to-[#6B21D9] text-white shadow-[0_6px_16px_rgba(107,33,217,0.25)] active:opacity-90 transition-opacity shrink-0"
+              aria-label={t('newChat')}
+              title={t('newChat')}
+            >
+              <FiPlus className="w-5 h-5" />
+            </motion.button>
+          </div>
         </motion.header>
 
         {/* Chat Window */}

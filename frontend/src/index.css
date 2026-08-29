@@ -763,8 +763,14 @@ button:disabled {
 .safe-bottom {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
 }
+/* Guarantees a minimum top padding on all devices and ADDS the notch inset on devices that have one */
 .safe-top {
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+}
+@media (min-width: 768px) {
+  .safe-top {
+    padding-top: max(1rem, env(safe-area-inset-top, 0px));
+  }
 }
 
 /* ===== Typing dot bounce ===== */

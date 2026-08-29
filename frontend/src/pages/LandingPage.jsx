@@ -70,10 +70,29 @@ const LandingPage = ({ onGetStarted }) => {
   };
 
   const navLinks = [
-    { label: 'Platform', href: '#platform' },
-    { label: 'How it Works', href: '#how-it-works' },
-    { label: 'Pricing', href: '#pricing' },
+    { label: 'Platform', href: '#platform', icon: 'dashboard' },
+    { label: 'How it Works', href: '#how-it-works', icon: 'account_tree' },
+    { label: 'Pricing', href: '#pricing', icon: 'payments' },
   ];
+
+  // Close mobile menu with Escape key
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setMobileNavOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileNavOpen]);
+
+  // Close mobile menu when viewport grows to desktop size
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) setMobileNavOpen(false);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <div className="relative min-h-screen w-full bg-mesh text-on-background font-body-md antialiased overflow-x-hidden">
@@ -86,15 +105,15 @@ const LandingPage = ({ onGetStarted }) => {
       </a>
       
       {/* ============ TopNavBar ============ */}
-      <nav className="fixed top-6 left-1/2 -translate-x-1/2 w-[calc(100%-40px)] max-w-container-max rounded-full border border-white/20 shadow-lg shadow-primary/5 bg-surface/70 backdrop-blur-xl flex justify-between items-center px-8 py-3 z-50 transition-all">
-        <div className="flex items-center gap-8">
-          <div className="flex items-center">
-            <Link to="/" className="w-12 h-12">
-                <img src="/AlphaLegalGPT_Logo.png" alt="AlphaLegalGPT Logo" />
+      <nav className="fixed top-4 md:top-6 left-1/2 -translate-x-1/2 w-[calc(100%-24px)] md:w-[calc(100%-40px)] max-w-container-max rounded-full border border-white/20 shadow-lg shadow-primary/5 bg-surface/70 backdrop-blur-xl flex justify-between items-center px-4 sm:px-6 md:px-8 py-2.5 md:py-3 z-50 transition-all">
+        <div className="flex items-center gap-4 md:gap-8">
+          <div className="flex items-center gap-2">
+            <Link to="/" className="w-10 h-10 md:w-12 md:h-12 shrink-0" aria-label="AlphaLegalGPT home">
+                <img src="/AlphaLegalGPT_Logo.png" alt="AlphaLegalGPT Logo" className="w-full h-full object-contain" />
             </Link>
             <Link
               to="/"
-              className="font-display-lg text-headline-sm font-bold tracking-tight text-primary"
+              className="font-display-lg text-[17px] md:text-headline-sm font-bold tracking-tight text-primary whitespace-nowrap"
               aria-label="AlphaLegalGPT home"
             >
               AlphaLegalGPT
@@ -112,7 +131,7 @@ const LandingPage = ({ onGetStarted }) => {
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
           <Link
             to="/login"
             className="hidden md:block text-label-md font-label-md text-on-surface hover:text-primary transition-colors px-4 py-2 border border-outline-variant rounded-full"
@@ -128,48 +147,84 @@ const LandingPage = ({ onGetStarted }) => {
           </Link>
           {/* Mobile menu toggle */}
           <button
-            className="md:hidden p-2 rounded-full hover:bg-surface-container transition-colors text-on-surface"
-            aria-label="Toggle navigation menu"
+            className="md:hidden relative p-2 rounded-full hover:bg-surface-container active:bg-surface-container-high transition-colors text-on-surface"
+            aria-label={mobileNavOpen ? 'Close navigation menu' : 'Open navigation menu'}
             aria-expanded={mobileNavOpen}
+            aria-controls="mobile-nav-menu"
             onClick={() => setMobileNavOpen((v) => !v)}
           >
-            <span className="material-symbols-outlined">{mobileNavOpen ? 'close' : 'menu'}</span>
+            <span
+              className={`material-symbols-outlined block transition-transform duration-300 ${mobileNavOpen ? 'rotate-90' : 'rotate-0'}`}
+            >
+              {mobileNavOpen ? 'close' : 'menu'}
+            </span>
           </button>
         </div>
       </nav>
 
+      {/* Mobile nav backdrop */}
+      <div
+        className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300 ${
+          mobileNavOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setMobileNavOpen(false)}
+        aria-hidden="true"
+      />
+
       {/* Mobile nav dropdown */}
-      {mobileNavOpen && (
-        <div className="fixed top-[72px] left-1/2 -translate-x-1/2 w-[calc(100%-40px)] max-w-container-max z-40 md:hidden">
-          <div className="glass-panel rounded-3xl p-4 flex flex-col gap-1 shadow-2xl">
-            {navLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                onClick={() => setMobileNavOpen(false)}
-                className="px-4 py-3 rounded-xl text-label-md font-label-md text-on-surface hover:bg-surface-container-low transition-colors"
-              >
-                {link.label}
-              </a>
-            ))}
-            <div className="flex flex-col gap-2 pt-2 mt-1 border-t border-outline-variant/20">
-              <Link
-                to="/login"
-                className="flex items-center justify-center px-4 py-2.5 rounded-xl text-label-md font-label-md text-on-surface hover:bg-surface-container-low transition-colors"
-              >
-                Login
-              </Link>
-              <Link
-                to="/signup"
-                onClick={handleGetStarted}
-                className="flex items-center justify-center px-4 py-2.5 rounded-xl text-label-md font-label-md bg-primary text-on-primary"
-              >
-                Get Started
-              </Link>
-            </div>
+      <div
+        id="mobile-nav-menu"
+        className={`fixed top-[88px] left-1/2 -translate-x-1/2 w-[calc(100%-24px)] max-w-sm z-40 md:hidden transition-all duration-300 ease-out origin-top ${
+          mobileNavOpen ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-3 scale-95 pointer-events-none'
+        }`}
+        aria-hidden={!mobileNavOpen}
+      >
+        <div className="glass-panel rounded-3xl p-3 shadow-2xl border border-white/20 flex flex-col">
+          {navLinks.map((link, i) => (
+            <a
+              key={link.label}
+              href={link.href}
+              onClick={() => setMobileNavOpen(false)}
+              style={{ transitionDelay: mobileNavOpen ? `${100 + i * 50}ms` : '0ms' }}
+              className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-label-md text-[15px] text-on-surface hover:bg-surface-container-low active:bg-surface-container-high transition-all duration-300 ${
+                mobileNavOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
+              }`}
+            >
+              <span className="w-9 h-9 shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-primary text-[20px]">{link.icon}</span>
+              </span>
+              {link.label}
+              <span className="material-symbols-outlined ml-auto text-on-surface-variant/60 text-[20px]">
+                chevron_right
+              </span>
+            </a>
+          ))}
+          <div className="flex flex-col gap-2 pt-3 mt-2 border-t border-outline-variant/20">
+            <Link
+              to="/login"
+              onClick={() => setMobileNavOpen(false)}
+              style={{ transitionDelay: mobileNavOpen ? '250ms' : '0ms' }}
+              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-label-md font-label-md text-on-surface border border-outline-variant hover:bg-surface-container-low active:bg-surface-container-high transition-all duration-300 ${
+                mobileNavOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[20px]">login</span>
+              Login
+            </Link>
+            <Link
+              to="/signup"
+              onClick={handleGetStarted}
+              style={{ transitionDelay: mobileNavOpen ? '300ms' : '0ms' }}
+              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-label-md font-label-md bg-primary text-on-primary hover:bg-secondary shadow-[0_0_15px_rgba(0,74,198,0.3)] transition-all duration-300 ${
+                mobileNavOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[20px]">rocket_launch</span>
+              Get Started
+            </Link>
           </div>
         </div>
-      )}
+      </div>
 
       <main id="main-content">
         {/* ============ Hero Section ============ */}
@@ -433,9 +488,9 @@ const LandingPage = ({ onGetStarted }) => {
               continuously updated with the latest gazette notifications and supreme court judgments.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-6 auto-rows-[250px] md:auto-rows-[300px]">
+          <div className="grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-6 auto-rows-auto md:auto-rows-[300px]">
             {/* Large Feature 1 */}
-            <div className="md:col-span-2 md:row-span-1 glass-panel rounded-3xl p-8 relative overflow-hidden group">
+            <div className="md:col-span-2 md:row-span-1 glass-panel rounded-3xl p-6 sm:p-8 relative overflow-hidden group">
               <div className="relative z-10">
                 <div className="w-12 h-12 rounded-xl bg-primary text-on-primary flex items-center justify-center mb-6 shadow-lg shadow-primary/20">
                   <span className="material-symbols-outlined">bolt</span>
@@ -461,12 +516,12 @@ const LandingPage = ({ onGetStarted }) => {
               </div>
             </div>
             {/* Small Feature 1 */}
-            <div className="md:col-span-1 md:row-span-1 glass-panel rounded-[40px] p-8 flex flex-col items-center text-center relative overflow-hidden bg-gradient-to-b from-surface/50 to-surface-container-high/30">
-              <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mb-4">
+            <div className="md:col-span-1 md:row-span-1 glass-panel rounded-[40px] p-6 sm:p-8 flex flex-col items-center justify-start text-center relative overflow-hidden bg-gradient-to-b from-surface/50 to-surface-container-high/30 min-h-[240px] md:min-h-0">
+              <div className="w-16 h-16 shrink-0 rounded-full bg-secondary/10 flex items-center justify-center mb-4">
                 <span className="material-symbols-outlined text-secondary text-3xl">shield_locked</span>
               </div>
               <h3 className="font-headline-sm text-[20px] font-semibold text-on-surface mb-2">Secure &amp; Private</h3>
-              <p className="font-body-md text-[14px] text-on-surface-variant mb-2">
+              <p className="font-body-md text-[14px] text-on-surface-variant mb-4">
                 Bank-grade AES-256 encryption for all your sensitive legal queries. Data sovereignty guaranteed.
               </p>
               <span className="text-xs font-semibold text-secondary bg-secondary/10 px-2 py-1 rounded-full mt-auto">
@@ -475,12 +530,12 @@ const LandingPage = ({ onGetStarted }) => {
             </div>
 
             {/* Small Feature 2 */}
-            <div className="md:col-span-1 md:row-span-1 glass-panel rounded-[40px] p-8 flex flex-col items-center text-center relative overflow-hidden bg-gradient-to-b from-surface/50 to-surface-container-high/30">
-              <div className="w-16 h-16 rounded-full bg-tertiary/10 flex items-center justify-center mb-4">
+            <div className="md:col-span-1 md:row-span-1 glass-panel rounded-[40px] p-6 sm:p-8 flex flex-col items-center justify-start text-center relative overflow-hidden bg-gradient-to-b from-surface/50 to-surface-container-high/30 min-h-[240px] md:min-h-0">
+              <div className="w-16 h-16 shrink-0 rounded-full bg-tertiary/10 flex items-center justify-center mb-4">
                 <span className="material-symbols-outlined text-tertiary text-3xl">translate</span>
               </div>
               <h3 className="font-headline-sm text-[20px] font-semibold text-on-surface mb-2">Multilingual Support</h3>
-              <p className="font-body-md text-[14px] text-on-surface-variant mb-2">
+              <p className="font-body-md text-[14px] text-on-surface-variant mb-4">
                 Query in English, Hindi, Tamil, or Bengali. Get responses in your preferred language for clarity.
               </p>
               <span className="text-xs font-semibold text-tertiary bg-tertiary/10 px-2 py-1 rounded-full mt-auto">
@@ -489,9 +544,9 @@ const LandingPage = ({ onGetStarted }) => {
             </div>
             
             {/* Large Feature 2 */}
-            <div className="md:col-span-2 md:row-span-1 glass-panel rounded-3xl p-8 relative overflow-hidden flex items-center justify-between">
+            <div className="md:col-span-2 md:row-span-1 glass-panel rounded-3xl p-6 sm:p-8 relative overflow-hidden flex items-center justify-between">
               <div className="max-w-sm z-10">
-                <div className="w-12 h-12 rounded-xl bg-tertiary text-on-tertiary flex items-center justify-center mb-6 shadow-lg shadow-tertiary/20">
+                <div className="w-12 h-12 rounded-xl bg-tertiary text-on-tertiary flex items-center justify-center mb-4 md:mb-6 shadow-lg shadow-tertiary/20">
                   <span className="material-symbols-outlined">history_edu</span>
                 </div>
                 <h3 className="font-headline-sm text-headline-sm text-on-surface mb-2">

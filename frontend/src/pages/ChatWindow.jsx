@@ -50,15 +50,6 @@ const WelcomeScreen = ({ onExampleClick }) => {
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4"
     >
-      {/* Logo with gradient chip */}
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.1, duration: 0.4 }}
-        className="w-24 h-24 sm:w-28 sm:h-28 mb-6 rounded-3xl bg-white/70 backdrop-blur-md border border-white/80 shadow-[0_8px_30px_rgba(37,65,214,0.12)] p-3 flex items-center justify-center"
-      >
-        <img src="/AlphaLegalGPT_Logo.png" alt="AlphaLegalGPT Logo" className="w-14 h-14 object-contain" />
-      </motion.div>
 
       {/* Title */}
       <h2 className="text-3xl font-display font-bold bg-gradient-to-r from-[#2541D6] via-[#6B21D9] to-[#8B5CF6] bg-clip-text text-transparent mb-3">
