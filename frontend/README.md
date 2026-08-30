@@ -1,7 +1,5 @@
 # AlphaLegalGPT Frontend
 
-**Owned & Maintained by [CodeNxte Web & Software Solutions](https://codenxte.com)**
-
 React + Vite chat interface for the AI Legal Assistant. Supports English and Tamil with real-time streaming, location-based nearby office search, and law reference sidebars.
 
 ## Stack

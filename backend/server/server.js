@@ -154,9 +154,7 @@ app.get('/api/health', (req, res) => {
     status: 'ok', 
     timestamp: new Date().toISOString(),
     service: 'AI LegalGPT Assistant (Gemini)',
-    socketIO: 'enabled',
-    owner: 'CodeNxte Web & Software Solutions',
-    website: 'https://codenxte.com'
+    socketIO: 'enabled'
   });
 });
 

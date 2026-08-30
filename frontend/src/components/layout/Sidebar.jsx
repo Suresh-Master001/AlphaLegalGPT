@@ -236,14 +236,6 @@ const Sidebar = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
           </svg>
         </button>
-
-        {/* Powered by caption */}
-        <p className="mt-2.5 text-center text-[10px] text-[#9AA0B4] font-body truncate">
-          Powered by{' '}
-          <a href="https://codenxte.com" target="_blank" rel="noopener noreferrer" className="text-[#2541D6] hover:text-[#6B21D9] transition-colors font-medium">
-            CodeNxte
-          </a>
-        </p>
       </div>
     </motion.aside>
   );

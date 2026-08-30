@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiMoon, FiSun, FiLogOut, FiDatabase, FiTrash2, FiDownload, FiAlertCircle, FiZap, FiGlobe, FiType, FiMessageSquare } from 'react-icons/fi';
+import { FiX, FiMoon, FiSun, FiLogOut, FiDatabase, FiTrash2, FiDownload, FiAlertCircle, FiZap, FiGlobe, FiType } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext';
 
 const SettingsModal = ({ isOpen, onClose }) => {
@@ -189,16 +189,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
                  </div>
                </button>
 
-               <button 
-                  onClick={() => window.open("mailto:contact@codenxte.com", "_blank")}
-                  className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-[#F6F7FB] rounded-xl transition-colors font-body">
-                  <div className="flex items-center gap-4 text-[#0B0D1C]">
-                     <FiMessageSquare className="w-5 h-5" />
-                     <span className="text-[15px]">Contact Support & Feedback</span>
-                  </div>
-                </button>
-
-              <button className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-[#F6F7FB] rounded-xl transition-colors font-body">
+               <button className="w-full flex items-center justify-between p-3 bg-transparent hover:bg-[#F6F7FB] rounded-xl transition-colors font-body">
                  <div className="flex items-center gap-4 text-[#0B0D1C]">
                     <FiDatabase className="w-5 h-5" />
                     <span className="text-[15px]">Your data in AlphaLegal</span>
@@ -209,14 +200,8 @@ const SettingsModal = ({ isOpen, onClose }) => {
 
           <hr className="border-[#E7E9F3]" />
 
-          {/* Footer - Powered by + Logout Activity */}
-          <div className="flex items-center justify-between px-6 py-4 bg-transparent border-t border-[#E7E9F3]">
-             <p className="text-xs text-[#9AA0B4] font-body">
-                Powered by{' '}
-                <a href="https://codenxte.com" target="_blank" rel="noopener noreferrer" className="text-[#2541D6] hover:text-[#6B21D9] transition-colors font-medium">
-                   CodeNxte
-                </a>
-             </p>
+          {/* Footer - Logout Activity */}
+          <div className="flex items-center justify-end px-6 py-4 bg-transparent border-t border-[#E7E9F3]">
              <button 
                 onClick={handleLogout}
                 className="flex items-center gap-2 px-5 py-2 text-sm text-[#0B0D1C] hover:bg-[#F6F7FB] rounded-full transition-colors border border-[#E7E9F3] font-body"

@@ -780,10 +780,6 @@ const LandingPage = ({ onGetStarted }) => {
               {/* Contact info */}
               <ul className="flex flex-col gap-2.5 text-on-surface-variant font-body-md text-body-md">
                 <li className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[20px] text-primary">mail</span>
-                  <span>codenxte@gmail.com</span>
-                </li>
-                <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[20px] text-primary">location_on</span>
                   <span>Tamil Nadu, India</span>
                 </li>
@@ -852,12 +848,6 @@ const LandingPage = ({ onGetStarted }) => {
             <div className="flex flex-col items-center sm:items-start gap-1">
               <p className="text-outline font-label-md text-label-md">
                 © {currentYear} AlphaLegalGPT. All rights reserved.
-              </p>
-              <p className="text-outline font-label-md text-label-md">
-                Powered by{' '}
-                <a href="https://codenxte.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-container transition-colors font-medium">
-                  CodeNxte Web &amp; Software Solutions
-                </a>
               </p>
             </div>
             <div className="flex items-center gap-5">

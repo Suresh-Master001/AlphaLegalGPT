@@ -30,14 +30,6 @@ const SplitAuthLayout = ({ children, inverse = false }) => {
         <div className={`flex flex-col ${inverse ? 'md:flex-row-reverse' : 'md:flex-row'} rounded-2xl md:rounded-3xl overflow-hidden shadow-[0_20px_60px_rgba(37,65,214,0.18),0_4px_16px_rgba(0,0,0,0.04)] border border-white/60 backdrop-blur-sm`}>
           {children}
         </div>
-
-        {/* Mobile-only trust footer */}
-        <p className="md:hidden text-center text-[11px] text-[#9AA0B4] mt-4">
-          Powered by{' '}
-          <a href="https://codenxte.com" target="_blank" rel="noopener noreferrer" className="text-[#2541D6] font-medium">
-            CodeNxte Web &amp; Software Solutions
-          </a>
-        </p>
       </motion.div>
     </div>
   );

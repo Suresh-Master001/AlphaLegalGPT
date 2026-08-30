@@ -82,18 +82,6 @@ const WelcomeScreen = ({ onExampleClick }) => {
           ))}
         </div>
 
-        {/* Powered by caption */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="text-center text-xs text-[#9AA0B4] font-body mt-8"
-        >
-          Powered by{' '}
-          <a href="https://codenxte.com" target="_blank" rel="noopener noreferrer" className="text-[#2541D6] hover:text-[#6B21D9] transition-colors font-medium">
-            CodeNxte Web &amp; Software Solutions
-          </a>
-        </motion.p>
       </div>
     </motion.div>
   );
